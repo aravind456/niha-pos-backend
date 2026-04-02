@@ -65,13 +65,24 @@ const User = mongoose.model('User', userSchema);
 
 app.post('/register', async (req, res) => {
     try {
+        const { mobile } = req.body;
+
+        // 1. Mobile number already irukka nu check panrom
+        const existingUser = await User.findOne({ mobile });
+        if (existingUser) {
+            return res.status(400).json({ message: "Mobile number already registered!" });
+        }
+
         const newUser = new User(req.body);
         let today = new Date();
         newUser.expiryDate = new Date(today.setDate(today.getDate() + 5)); 
+        
         await newUser.save();
-        res.status(201).send({ message: "Registered! 5 Days Trial Started." });
+        res.status(201).json({ message: "Registered! 5 Days Trial Started." });
+
     } catch (err) {
-        res.status(400).send({ error: "Registration Failed!" });
+        console.error("Registration Error:", err.message); // Server console-la error theriyum
+        res.status(500).json({ error: "Server Error", details: err.message });
     }
 });
 

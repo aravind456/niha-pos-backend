@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -11,7 +12,19 @@ const PORT = process.env.PORT || 5000;
 
 /// 2. DATABASE CONNECTION URL
 // Pazhaya hardcoded string-ku badhula idhai podunga
-const dbURI = process.env.MONGO_URI;
+const mySecret = process.env.MONGO_URI; 
+
+const intialDbConnection = async () => {
+  try {
+    // 3. Database connect panna try pannuvom
+    await mongoose.connect(mySecret);
+    console.log("✅ db connected");
+  } catch (error) {
+    // 4. Problem irundha inga error varum
+    console.error("❌ Connection failed:", error.message);
+  }
+}
+
 // 1. Models Import
 try {
     const productRoutes = require('./routes/Product');
@@ -129,7 +142,7 @@ app.post('/update-shop', async (req, res) => {
     }
 });
 
-mongoose.connect(dbURI)
+mongoose.connect(mySecret)
   .then(() => {
     console.log('✅ Connected to MongoDB Atlas Successfully!');
     // Connection success aanadhukku apparam server-ai start pannuvom

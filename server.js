@@ -153,6 +153,8 @@ app.post('/update-shop', async (req, res) => {
     }
 });
 
+// --- DATABASE CONNECTION & SERVER START ---
+
 mongoose.connect(mySecret)
   .then(() => {
     console.log('✅ Connected to MongoDB Atlas Successfully!');
@@ -162,7 +164,7 @@ mongoose.connect(mySecret)
     });
   })
   .catch((err) => {
-    // Message mattum print panna clear-ah irukkum
+    // Ip error vantha inga print aagum
     console.error('❌ MongoDB Connection Error:', err.message);
   });
 

@@ -155,16 +155,18 @@ app.post('/update-shop', async (req, res) => {
 
 // --- DATABASE CONNECTION & SERVER START ---
 
+// --- DATABASE CONNECTION & SERVER START ---
+
 mongoose.connect(mySecret)
   .then(() => {
     console.log('✅ Connected to MongoDB Atlas Successfully!');
-    // Connection success aanadhukku apparam server-ai start pannuvom
-    app.listen(PORT, () => {
+    
+    // CHANGE IS HERE: Added '0.0.0.0' inside app.listen
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server is running on port ${PORT}`);
     });
   })
   .catch((err) => {
-    // Ip error vantha inga print aagum
     console.error('❌ MongoDB Connection Error:', err.message);
   });
 

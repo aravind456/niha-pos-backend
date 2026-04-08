@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000;
 
 /// 2. DATABASE CONNECTION URL
 // Pazhaya hardcoded string-ku badhula idhai podunga

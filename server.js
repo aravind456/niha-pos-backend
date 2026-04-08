@@ -8,6 +8,10 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+app.get('/', (req, res) => {
+  res.send('Niha POS Server is Running Successfully!');
+});
+
 const PORT = process.env.PORT || 10000;
 
 /// 2. DATABASE CONNECTION URL

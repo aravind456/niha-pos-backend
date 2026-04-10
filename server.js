@@ -61,6 +61,32 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
+// --- EXPIRY CHECK MIDDLEWARE ---
+const checkExpiry = async (req, res, next) => {
+    try {
+        const { mobile } = req.headers; // Mobile number-ah header-la anupa sollunga Flutter-la irundhu
+        
+        if (!mobile) return next(); // Mobile illa na bypass (login/register-kaga)
+
+        const user = await User.findOne({ mobile });
+        if (user) {
+            let today = new Date();
+            if (!user.isPremium && user.expiryDate && today > user.expiryDate) {
+                return res.status(403).json({ 
+                    error: "Expired", 
+                    message: "Trial expired! Please contact admin." 
+                });
+            }
+        }
+        next();
+    } catch (e) {
+        next();
+    }
+};
+
+// Ellaa routes-kum munnadi idhai apply pannunga
+app.use(checkExpiry);
+
 // server.js-la ithu irukanum
  
 

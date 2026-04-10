@@ -155,14 +155,17 @@ app.post('/login', async (req, res) => {
 
             res.status(200).send({ message: "Login Success!", 
                 
-                user :{
-                    name: user.name,
-                    mobile: user.mobile,
-                    expiryDate: user.expiryDate, // Idhu mukkiam!
-                    isPremium: user.isPremium,
-                    shopDetails: user.shopDetails || { shopName: user.name },
-                    expiryDate: user.expiryDate // Intha line-ah add pannunga
-                }
+                user: {
+        name: user.name,
+        mobile: user.mobile,
+        expiryDate: user.expiryDate, 
+        isPremium: user.isPremium,
+        shopDetails: { 
+            ...(user.shopDetails || {}), 
+            shopName: user.shopDetails?.shopName || user.name,
+            expiryDate: user.expiryDate // <--- Intha line mukkiam!
+        }
+    }
              });
         } else {
             res.status(401).send({ error: "Invalid login!" });

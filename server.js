@@ -160,7 +160,8 @@ app.post('/login', async (req, res) => {
                     mobile: user.mobile,
                     expiryDate: user.expiryDate, // Idhu mukkiam!
                     isPremium: user.isPremium,
-                    shopDetails: user.shopDetails || { shopName: user.name }
+                    shopDetails: user.shopDetails || { shopName: user.name },
+                    expiryDate: user.expiryDate // Intha line-ah add pannunga
                 }
              });
         } else {

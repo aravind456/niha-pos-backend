@@ -153,7 +153,16 @@ app.post('/login', async (req, res) => {
                 });
             }
 
-            res.status(200).send({ message: "Login Success!", user });
+            res.status(200).send({ message: "Login Success!", 
+                
+                user :{
+                    name: user.name,
+                    mobile: user.mobile,
+                    expiryDate: user.expiryDate, // Idhu mukkiam!
+                    isPremium: user.isPremium,
+                    shopName: user.shopDetails ? user.shopDetails.shopName : "Niha POS"
+                }
+             });
         } else {
             res.status(401).send({ error: "Invalid login!" });
         }

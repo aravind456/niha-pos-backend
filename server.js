@@ -176,21 +176,35 @@ app.post('/login', async (req, res) => {
 });
 
 // --- SHOP UPDATE ROUTE ---
+// server.js-la intha route-ah replace pannunga:
 app.post('/update-shop', async (req, res) => {
     try {
         const { mobile, shopDetails } = req.body;
-        // User-ah kandupudichi shopDetails-ah mattum update panrom
-        const updatedUser = await User.findOneAndUpdate(
-            { mobile: mobile },
-            { $set: { shopDetails: shopDetails } },
-            { new: true }
-        );
-
-        if (updatedUser) {
-            res.status(200).send({ message: "Shop Details Updated!", user: updatedUser });
-        } else {
-            res.status(404).send({ message: "User not found!" });
+        
+        // 1. First user-ah find panrom
+        const user = await User.findOne({ mobile: mobile });
+        
+        if (!user) {
+            return res.status(404).send({ message: "User not found!" });
         }
+
+        // 2. Shop details kulla expiry date-ah sethu merge panrom
+        const finalShopDetails = {
+            ...shopDetails,
+            expiryDate: user.expiryDate // Database-la irukura date-ah inga sethu vidurom
+        };
+
+        // 3. Ippo update panrom
+        user.shopDetails = finalShopDetails;
+        await user.save();
+
+        res.status(200).send({ 
+            message: "Shop Details Updated!", 
+            user: {
+                ...user._doc,
+                shopDetails: finalShopDetails // Updated details-ah Flutter-ku thirumba anupurom
+            } 
+        });
     } catch (err) {
         res.status(500).send({ error: "Server Error", details: err.message });
     }

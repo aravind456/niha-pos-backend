@@ -160,7 +160,7 @@ app.post('/login', async (req, res) => {
                     mobile: user.mobile,
                     expiryDate: user.expiryDate, // Idhu mukkiam!
                     isPremium: user.isPremium,
-                    shopName: user.shopDetails ? user.shopDetails.shopName : "Niha POS"
+                    shopDetails: user.shopDetails || { shopName: user.name }
                 }
              });
         } else {

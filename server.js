@@ -149,7 +149,7 @@ app.post('/login', async (req, res) => {
             if (!user.isPremium && user.expiryDate && today > user.expiryDate) {
                 return res.status(403).send({ 
                     error: "Trial Expired!", 
-                    message: "Unga 5 days trial mudinjiruchi." 
+                    message: "Trial Expired! Please contact admin..." 
                 });
             }
 

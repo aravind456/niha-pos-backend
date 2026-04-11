@@ -15,6 +15,8 @@ const SettingsSchema = new mongoose.Schema({
   totalDiscOption: { type: Boolean, default: false },
   salesmanOption: { type: Boolean, default: false },
 
+  salesmanList: { type: [String], default: [] },
+
   lastUpdated: { type: Date, default: Date.now }
 });
 

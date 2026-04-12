@@ -51,4 +51,58 @@ const newInvoice = new Invoice({
     }
 });
 
+// --- Intha portion-ah unga invoiceRoutes.js-la save-bill-ku keela add pannunga ---
+
+router.get('/today-sales/:mobile', async (req, res) => {
+    try {
+        const mobile = req.params.mobile;
+
+        // 1. India Time (IST) kaga innaiku start and end calculate panrom
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // 2. Database Query - billDate field-ah use panrom
+        const invoices = await Invoice.find({
+            userMobile: mobile,
+            billDate: { 
+                $gte: startOfDay,
+                $lte: endOfDay
+            }
+        });
+
+        let total = 0, cash = 0, upi = 0, credit = 0;
+
+        invoices.forEach(inv => {
+            // totalAmount field-ah use panrom
+            const amount = Number(inv.totalAmount) || 0; 
+            total += amount;
+
+            // Payment Mode-la DB-la irukura maari check panrom
+            if (inv.paymentMode === 'Cash') {
+                cash += amount;
+            } else if (inv.paymentMode === 'UPI') {
+                upi += amount;
+            } else if (inv.paymentMode === 'Credit') {
+                credit += amount;
+            }
+        });
+
+        // 3. Response anupuroam
+        res.json({
+            totalSales: total,
+            cashSales: cash,
+            upiSales: upi,
+            creditSales: credit
+        });
+
+    } catch (e) {
+        console.error("Dashboard Sales Error:", e);
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+
 module.exports = router;

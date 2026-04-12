@@ -37,11 +37,15 @@ try {
     const settingsRoutes = require('./routes/Settings');
     const invoiceRoutes = require('./routes/invoiceRoutes'); // Unga file name check pannikonga
 
+
+
+
     app.use('/api/products', productRoutes);
     app.use('/api/customers', customerRoutes); 
     app.use('/api/suppliers', supplierRoutes);
     app.use('/api/settings', settingsRoutes);
     app.use('/api/invoices', invoiceRoutes);
+
 
 } catch (e) {
     console.log("⚠️ Routes load pannuvadhil small issue, but server run aagum.");

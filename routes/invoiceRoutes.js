@@ -59,20 +59,14 @@ router.get('/today-sales/:mobile', async (req, res) => {
     try {
         const mobile = req.params.mobile;
 
-        // 1. Innaiku date-ah "YYYY-MM-DD" format-ku mathurom (Example: "2026-04-12")
-        // IST (India Time) kaga current date yedukkarom
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const todayStr = `${year}-${month}-${day}`;
+        // 1. India Time (IST) padi innaiku date-ah string-ah edukkarom
+        // Ithu Render server-la irunthalum IST date-ah correct-ah yedukkum
+        const todayStr = new Date().toLocaleDateString('en-CA'); // Result: "2026-04-12"
 
-        console.log("Searching for date prefix:", todayStr);
+        console.log("Searching for bills on date:", todayStr);
 
         // 2. Database Query: billDate string-la innaiku date start aagutha nu Regex use panrom
-        // Inga Invoice model dhaan use pannanum (neenga anupuna customer route vera file)
-        const Invoice = require('../models/Invoice'); 
-        
+        // Unga DB-la billDate string-ah irukkurathala ithu thaan correct approach
         const invoices = await Invoice.find({
             userMobile: mobile,
             billDate: { $regex: `^${todayStr}` } 
@@ -81,11 +75,10 @@ router.get('/today-sales/:mobile', async (req, res) => {
         let total = 0, cash = 0, upi = 0, credit = 0;
 
         invoices.forEach(inv => {
-            // totalAmount field name check pannikonga
+            // totalAmount field name and paymentMode spelling check (C capital)
             const amount = Number(inv.totalAmount) || 0;
             total += amount;
 
-            // Spelling and Case sensitive check (C capital)
             if (inv.paymentMode === 'Cash') {
                 cash += amount;
             } else if (inv.paymentMode === 'UPI') {
@@ -95,6 +88,7 @@ router.get('/today-sales/:mobile', async (req, res) => {
             }
         });
 
+        // 3. Response-ah Dashboard-ku anupuroam
         res.json({
             totalSales: total,
             cashSales: cash,

@@ -14,7 +14,7 @@ router.post('/save-bill', async (req, res) => {
             billNo: nextBillNo,
             customerName: req.body.customerName || "Cash",
             customerMobile: req.body.customerMobile || "",
-            salesmanName: req.body.salesmanName || "Self",
+            
             cartItems: req.body.items, // Frontend-la 'items' nu anupuna inga 'cartItems' nu save aagum
             totalAmount: req.body.totalAmount,
             paymentMode: req.body.paymentMode,

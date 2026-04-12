@@ -1,33 +1,41 @@
 router.post('/save-bill', async (req, res) => {
-    try {
-        // 1. Bill Number Auto-increment Logic
-        const lastInvoice = await Invoice.findOne().sort({ billNo: -1 });
-        let nextBillNo = lastInvoice && lastInvoice.billNo ? lastInvoice.billNo + 1 : 1;
+    // 1. First-ey userMobile check pannanum (Intha block-ah mela kondu vandhutom)
+    if (!req.body.userMobile) {
+        return res.status(400).json({ success: false, message: "userMobile is required!" });
+    }
 
-        // 2. Bill-ah save panrom (billNo sethu)
+    try {
+        // 2. Bill Number Auto-increment
+        // userMobile vachu filter panna thaan antha user-oda correct bill no varum
+        const lastInvoice = await Invoice.findOne({ userMobile: req.body.userMobile }).sort({ billNo: -1 });
+        let nextBillNo = 1;
+        
+        if (lastInvoice && lastInvoice.billNo) {
+            // BillNo string-ah irundha parseInt pannanum, number-ah irundha direct-ah +1
+            nextBillNo = parseInt(lastInvoice.billNo) + 1;
+        }
+
+        // 3. Bill-ah save panrom
         const newInvoice = new Invoice({
             ...req.body,
-            billNo: nextBillNo
+            billNo: nextBillNo.toString() // Schema string-na toString() pannunga
         });
         const savedInvoice = await newInvoice.save();
 
-        // 3. Credit logic: existing logic-ah use panrom
-        // Note: Frontend-la irunthu 'creditAmount' nu anupuna adha 'paymentDetails.credit' ku mathikonga
+        // 4. Credit logic
         const creditAmt = req.body.creditAmount || (req.body.paymentDetails ? req.body.paymentDetails.credit : 0);
 
         if (creditAmt > 0 && req.body.customerId) {
             await Customer.findByIdAndUpdate(
                 req.body.customerId, 
-                { 
-                    $inc: { totalDue: creditAmt } 
-                }
+                { $inc: { totalDue: creditAmt } }
             );
         }
 
         res.status(201).json({ 
             success: true, 
             message: "Bill Saved Successfully!",
-            billNo: savedInvoice.billNo, // Bill number-ah thirumba anupuna frontend-la display panna vasathiya irukum
+            billNo: savedInvoice.billNo,
             invoiceId: savedInvoice._id 
         });
 

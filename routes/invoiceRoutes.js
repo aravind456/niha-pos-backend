@@ -59,12 +59,12 @@ router.get('/today-sales/:mobile', async (req, res) => {
     try {
         const mobile = req.params.mobile;
 
-        // 1. Innaiku date-ah YYYY-MM-DD format-ku mathurom
+        // 1. Innaiku date-ah "YYYY-MM-DD" format-la string-ah mathurom
         // Example: "2026-04-12"
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // 2. Database Query: billDate antha string-la start aagutha nu check panrom
-        // Ithu 'String' format-la irukura date-ku correct-ah set aagum
+        // 2. Query: billDate intha string-la start aagutha nu check panrom
+        // Unga DB-la string-ah date irukurathala, proper matching ithu thaan.
         const invoices = await Invoice.find({
             userMobile: mobile,
             billDate: { $regex: `^${todayStr}` } 
@@ -76,7 +76,7 @@ router.get('/today-sales/:mobile', async (req, res) => {
             const amount = Number(inv.totalAmount) || 0;
             total += amount;
 
-            // Spelling: Image-la 'Cash' (C capital) nu irukku
+            // Database-la 'Cash' nu irukku (C capital)
             if (inv.paymentMode === 'Cash') {
                 cash += amount;
             } else if (inv.paymentMode === 'UPI') {

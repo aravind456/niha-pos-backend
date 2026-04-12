@@ -59,33 +59,24 @@ router.get('/today-sales/:mobile', async (req, res) => {
     try {
         const mobile = req.params.mobile;
 
-        // 1. India Time (IST) kaga innaiku morning and night time set panrom
-        const start = new Date();
-        start.setHours(0, 0, 0, 0);
+        // 1. Innaiku date-ah YYYY-MM-DD format-ku mathurom
+        // Example: "2026-04-12"
+        const todayStr = new Date().toISOString().split('T')[0];
 
-        const end = new Date();
-        end.setHours(23, 59, 59, 999);
-
-        // Debug: Console-la intha date range-ah check pannunga
-        console.log("Checking from:", start.toISOString(), "to:", end.toISOString());
-
-        // 2. Query: 'billDate' field-ah filter panrom
+        // 2. Database Query: billDate antha string-la start aagutha nu check panrom
+        // Ithu 'String' format-la irukura date-ku correct-ah set aagum
         const invoices = await Invoice.find({
             userMobile: mobile,
-            billDate: { 
-                $gte: start,
-                $lte: end
-            }
+            billDate: { $regex: `^${todayStr}` } 
         });
 
         let total = 0, cash = 0, upi = 0, credit = 0;
 
         invoices.forEach(inv => {
-            // totalAmount field-ah number-ah mathurom
-            const amount = Number(inv.totalAmount) || 0; 
+            const amount = Number(inv.totalAmount) || 0;
             total += amount;
 
-            // DB-la irukura 'Cash' (Capital C) spelling match panrom
+            // Spelling: Image-la 'Cash' (C capital) nu irukku
             if (inv.paymentMode === 'Cash') {
                 cash += amount;
             } else if (inv.paymentMode === 'UPI') {
@@ -103,8 +94,8 @@ router.get('/today-sales/:mobile', async (req, res) => {
         });
 
     } catch (e) {
-        console.error("Dashboard Sales Error:", e);
-        res.status(500).json({ success: false, message: e.message });
+        console.error("Dashboard Error:", e);
+        res.status(500).json({ error: e.message });
     }
 });
 

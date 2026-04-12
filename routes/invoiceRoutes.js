@@ -53,18 +53,20 @@ const newInvoice = new Invoice({
 
 // --- Intha portion-ah unga invoiceRoutes.js-la save-bill-ku keela add pannunga ---
 
+// routes/invoiceRoutes.js
+
 router.get('/today-sales/:mobile', async (req, res) => {
     try {
         const mobile = req.params.mobile;
 
-        // 1. India Time (IST) kaga innaiku start and end calculate panrom
+        // 1. Timezone Fix: India time (IST) kaga Date range set panrom
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
 
         const endOfDay = new Date();
         endOfDay.setHours(23, 59, 59, 999);
 
-        // 2. Database Query - billDate field-ah use panrom
+        // 2. Query: Unga DB-la field name 'billDate' nu irukku
         const invoices = await Invoice.find({
             userMobile: mobile,
             billDate: { 
@@ -76,11 +78,12 @@ router.get('/today-sales/:mobile', async (req, res) => {
         let total = 0, cash = 0, upi = 0, credit = 0;
 
         invoices.forEach(inv => {
-            // totalAmount field-ah use panrom
+            // DB-la 'totalAmount' nu irukku, atha number-ah mathurom
             const amount = Number(inv.totalAmount) || 0; 
             total += amount;
 
-            // Payment Mode-la DB-la irukura maari check panrom
+            // Payment Mode Check: DB-la 'Cash' (C capital) nu store aaguthu
+            // 'UPI' and 'Credit' spelling-um check pannikonga
             if (inv.paymentMode === 'Cash') {
                 cash += amount;
             } else if (inv.paymentMode === 'UPI') {
@@ -90,7 +93,6 @@ router.get('/today-sales/:mobile', async (req, res) => {
             }
         });
 
-        // 3. Response anupuroam
         res.json({
             totalSales: total,
             cashSales: cash,
@@ -99,10 +101,9 @@ router.get('/today-sales/:mobile', async (req, res) => {
         });
 
     } catch (e) {
-        console.error("Dashboard Sales Error:", e);
-        res.status(500).json({ success: false, message: e.message });
+        console.error("Dashboard Error:", e);
+        res.status(500).json({ error: e.message });
     }
 });
-
 
 module.exports = router;

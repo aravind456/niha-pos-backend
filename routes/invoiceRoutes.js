@@ -59,12 +59,20 @@ router.get('/today-sales/:mobile', async (req, res) => {
     try {
         const mobile = req.params.mobile;
 
-        // 1. Innaiku date-ah "YYYY-MM-DD" format-la string-ah mathurom
-        // Example: "2026-04-12"
-        const todayStr = new Date().toISOString().split('T')[0];
+        // 1. Innaiku date-ah "YYYY-MM-DD" format-ku mathurom (Example: "2026-04-12")
+        // IST (India Time) kaga current date yedukkarom
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
 
-        // 2. Query: billDate intha string-la start aagutha nu check panrom
-        // Unga DB-la string-ah date irukurathala, proper matching ithu thaan.
+        console.log("Searching for date prefix:", todayStr);
+
+        // 2. Database Query: billDate string-la innaiku date start aagutha nu Regex use panrom
+        // Inga Invoice model dhaan use pannanum (neenga anupuna customer route vera file)
+        const Invoice = require('../models/Invoice'); 
+        
         const invoices = await Invoice.find({
             userMobile: mobile,
             billDate: { $regex: `^${todayStr}` } 
@@ -73,10 +81,11 @@ router.get('/today-sales/:mobile', async (req, res) => {
         let total = 0, cash = 0, upi = 0, credit = 0;
 
         invoices.forEach(inv => {
+            // totalAmount field name check pannikonga
             const amount = Number(inv.totalAmount) || 0;
             total += amount;
 
-            // Database-la 'Cash' nu irukku (C capital)
+            // Spelling and Case sensitive check (C capital)
             if (inv.paymentMode === 'Cash') {
                 cash += amount;
             } else if (inv.paymentMode === 'UPI') {
@@ -95,7 +104,7 @@ router.get('/today-sales/:mobile', async (req, res) => {
 
     } catch (e) {
         console.error("Dashboard Error:", e);
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ success: false, error: e.message });
     }
 });
 

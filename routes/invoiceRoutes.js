@@ -16,12 +16,14 @@ router.post('/save-bill', async (req, res) => {
             nextBillNo = parseInt(lastInvoice.billNo) + 1;
         }
 
-        // 2. Bill Saving
-        const newInvoice = new Invoice({
-            ...req.body,
-            billNo: nextBillNo.toString(),
-            cartItems: req.body.items // Flutter-la irundhu vara 'items'-ah 'cartItems'-ku mathurom
-        });
+        // Bill Saving section-la customerName-ku default kudunga
+const newInvoice = new Invoice({
+    ...req.body,
+    customerName: req.body.customerName || "Cash", // Null-ah vandha 'Cash' nu save aagum
+    customerMobile: req.body.customerMobile || "",
+    billNo: nextBillNo.toString(),
+    cartItems: req.body.items 
+});
 
         const savedInvoice = await newInvoice.save();
 

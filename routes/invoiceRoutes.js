@@ -1,3 +1,7 @@
+const express = require('express');
+const router = express.Router();
+const Invoice = require('../models/Invoice'); // Inga model import mukkiam
+
 router.post('/save-bill', async (req, res) => {
     // 1. First-ey userMobile check pannanum (Intha block-ah mela kondu vandhutom)
     if (!req.body.userMobile) {

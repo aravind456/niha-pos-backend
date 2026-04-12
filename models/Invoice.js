@@ -1,6 +1,30 @@
+const mongoose = require('mongoose');
+
+// 1. Schema name and Model name check
+const invoiceSchema = new mongoose.Schema({
+    userMobile: { type: String, required: true },
+    billNo: { type: String, required: true },
+    customerName: String,
+    customerMobile: String,
+    salesmanName: String,
+    cartItems: Array, // Neenga anupura 'items' inga save aagum
+    totalAmount: Number,
+    paymentMode: String,
+    billDate: { type: Date, default: Date.now }
+});
+
+// Model-ah define pannunga (Inga 'Invoice' nu kudutha Atlas-la 'invoices' nu collection create aagum)
+const Invoice = mongoose.model('Invoice', invoiceSchema);
+
+// 2. Router-la Error varama irukka:
 router.post('/save-bill', async (req, res) => {
     try {
-        // 1. Bill Number Logic (String-ah irundhalum namma Number-ah mathi +1 panrom)
+        // userMobile check (Ithu illana MongoDB search-ey panna mudiyathu)
+        if (!req.body.userMobile) {
+            return res.status(400).json({ success: false, message: "userMobile is required!" });
+        }
+
+        // Bill Number Logic
         const lastInvoice = await Invoice.findOne({ userMobile: req.body.userMobile }).sort({ _id: -1 });
         let nextBillNo = "1"; 
         
@@ -8,23 +32,20 @@ router.post('/save-bill', async (req, res) => {
             nextBillNo = (parseInt(lastInvoice.billNo) + 1).toString();
         }
 
-        // 2. Puthiya Bill Create Panrom
+        // Puthiya Bill Create
         const newInvoice = new Invoice({
             userMobile: req.body.userMobile,
             billNo: nextBillNo,
             customerName: req.body.customerName || "Cash",
             customerMobile: req.body.customerMobile || "",
             salesmanName: req.body.salesmanName || "Self",
-            cartItems: req.body.items, // Frontend-la 'items' nu anupuna inga 'cartItems' nu save aagum
-            totalAmount: req.body.totalAmount,
-            paymentMode: req.body.paymentMode,
+            cartItems: req.body.items, 
+            totalAmount: req.body.totalAmount || 0,
+            paymentMode: req.body.paymentMode || "Cash",
             billDate: req.body.createdAt || Date.now()
         });
 
         const savedInvoice = await newInvoice.save();
-
-        // 3. Credit Logic (Ledger Update)
-        // Neenga munnadiye vechiruntha antha Customer Balance update code-ah inga add pannikonga
 
         res.status(201).json({ 
             success: true, 
@@ -33,10 +54,9 @@ router.post('/save-bill', async (req, res) => {
         });
 
     } catch (err) {
-        console.error(err);
+        console.error("Save Bill Error:", err);
         res.status(400).json({ success: false, message: err.message });
     }
 });
 
-
-module.exports = mongoose.model('Invoice', invoiceSchema);
+module.exports = Invoice; // Inga 'Invoice' ah direct-ah export pannunga

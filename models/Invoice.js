@@ -1,3 +1,5 @@
+const express = require('express');
+const router = express.Router();
 const mongoose = require('mongoose');
 
 // 1. Schema name and Model name check

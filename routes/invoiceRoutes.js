@@ -1,125 +1,131 @@
 const express = require('express');
 const router = express.Router();
-const Invoice = require('../models/Invoice');
-const Customer = require('../models/Customer'); // Model import mukkiam
+const mongoose = require('mongoose');
 
+// 1. Schema Definition
+const invoiceSchema = new mongoose.Schema({
+    userMobile: { type: String, required: true },
+    billNo: { type: String, required: true },
+    customerName: String,
+    customerMobile: String,
+    salesmanName: String,
+    cartItems: Array,
+    totalAmount: Number,
+    paymentMode: String,
+    billDate: { type: Date, default: Date.now },
+    // Multi payment-க்காக இவை தேவை
+    cashAmount: Number,
+    onlineAmount: Number,
+    creditAmount: Number
+});
+
+// 2. Model Creation
+const Invoice = mongoose.models.Invoice || mongoose.model('Invoice', invoiceSchema);
+
+// Customer Model Import (இது Ledger அப்டேட் செய்ய தேவை)
+// ஒருவேளை உங்கள் models folder-ல் Customer.js இருந்தால் இதை பயன்படுத்தவும்
+let Customer;
+try {
+    Customer = mongoose.model('Customer');
+} catch (e) {
+    // ஒருவேளை இன்னும் model கிரியேட் ஆகவில்லை என்றால் import செய்யவும்
+    Customer = require('../models/Customer');
+}
+
+// ==========================================
+// 1. SAVE BILL API
+// ==========================================
 router.post('/save-bill', async (req, res) => {
-    if (!req.body.userMobile) {
-        return res.status(400).json({ success: false, message: "userMobile is required!" });
-    }
-
     try {
-        // 1. Bill Number Logic
-        const lastInvoice = await Invoice.findOne({ userMobile: req.body.userMobile }).sort({ billNo: -1 });
-        let nextBillNo = 1;
-        if (lastInvoice && lastInvoice.billNo) {
-            nextBillNo = parseInt(lastInvoice.billNo) + 1;
+        if (!req.body.userMobile) {
+            return res.status(400).json({ success: false, message: "userMobile is required!" });
         }
 
-        // Bill Saving section-la customerName-ku default kudunga
-const newInvoice = new Invoice({
-    ...req.body,
-    customerName: req.body.customerName || "Cash", // Null-ah vandha 'Cash' nu save aagum
-    customerMobile: req.body.customerMobile || "",
-    billNo: nextBillNo.toString(),
-    cartItems: req.body.items 
-});
+        const lastInvoice = await Invoice.findOne({ userMobile: req.body.userMobile }).sort({ _id: -1 });
+        let nextBillNo = "1"; 
+        
+        if (lastInvoice && lastInvoice.billNo) {
+            nextBillNo = (parseInt(lastInvoice.billNo) + 1).toString();
+        }
+
+        const newInvoice = new Invoice({
+            ...req.body,
+            billNo: nextBillNo,
+            customerName: req.body.customerName || "Cash",
+            customerMobile: req.body.customerMobile || "",
+            salesmanName: req.body.salesmanName || "Self",
+            cartItems: req.body.items, 
+            billDate: req.body.createdAt || Date.now()
+        });
 
         const savedInvoice = await newInvoice.save();
 
-        // 3. Customer Ledger Update (If Credit)
+        // Customer Ledger Update (If Credit)
         if (req.body.creditAmount > 0 && req.body.customerId) {
             try {
                 await Customer.findByIdAndUpdate(
                     req.body.customerId, 
                     { $inc: { totalDue: req.body.creditAmount } }
                 );
-            } catch (custErr) {
-                console.log("Customer update failed, but bill saved.");
-            }
+            } catch (err) { console.log("Ledger update failed"); }
         }
 
         res.status(201).json({ 
             success: true, 
-            message: "Bill Saved Successfully!",
-            billNo: savedInvoice.billNo
+            message: "Bill Saved!", 
+            billNo: savedInvoice.billNo 
         });
 
     } catch (err) {
-        console.error("Save Bill Error:", err);
         res.status(400).json({ success: false, message: err.message });
     }
 });
 
-// --- Intha portion-ah unga invoiceRoutes.js-la save-bill-ku keela add pannunga ---
-
-// routes/invoiceRoutes.js
-
+// ==========================================
+// 2. TODAY SALES API
+// ==========================================
 router.get('/today-sales/:mobile', async (req, res) => {
     try {
         const mobile = req.params.mobile;
-
-        // 1. இன்றைய தேதியின் ஆரம்பம் மற்றும் முடிவைக் கணக்கிடுதல் (Date Range)
-        // இதுதான் MongoDB-யில் தேதிகளைத் தேடும் சரியான முறை
         const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0); // இன்றைய நாள் ஆரம்பம் 12:00 AM
-
+        startOfDay.setHours(0, 0, 0, 0); 
         const endOfDay = new Date();
-        endOfDay.setHours(23, 59, 59, 999); // இன்றைய நாள் முடிவு 11:59 PM
+        endOfDay.setHours(23, 59, 59, 999); 
 
-        console.log("Searching bills from:", startOfDay, "to", endOfDay);
-
-        // 2. $regex-க்கு பதிலாக $gte (Greater than) மற்றும் $lte (Less than) பயன்படுத்துகிறோம்
         const invoices = await Invoice.find({
             userMobile: mobile,
-            billDate: { 
-                $gte: startOfDay, 
-                $lte: endOfDay 
-            }
+            billDate: { $gte: startOfDay, $lte: endOfDay }
         });
 
         let total = 0, cash = 0, upi = 0, credit = 0;
-
         invoices.forEach(inv => {
             const amount = Number(inv.totalAmount) || 0;
             total += amount;
-
-            // 3. Payment Mode-ஐ பொறுத்து பிரித்துக் கணக்கிடுதல்
-            if (inv.paymentMode === 'Cash') {
-                cash += amount;
-            } else if (inv.paymentMode === 'UPI') {
-                upi += amount;
-            } else if (inv.paymentMode === 'Credit') {
-                credit += amount;
-            } else if (inv.paymentMode === 'Multi') {
-                // Multi ஆக இருந்தால் தனித்தனியாகச் சேர்க்க வேண்டும்
+            if (inv.paymentMode === 'Cash') cash += amount;
+            else if (inv.paymentMode === 'UPI') upi += amount;
+            else if (inv.paymentMode === 'Credit') credit += amount;
+            else if (inv.paymentMode === 'Multi') {
                 cash += Number(inv.cashAmount) || 0;
                 upi += Number(inv.onlineAmount) || 0;
                 credit += Number(inv.creditAmount) || 0;
             }
         });
 
-        // 4. Response-ஐ ஆப்பிற்கு அனுப்புதல்
-        res.json({
-            totalSales: total,
-            cashSales: cash,
-            upiSales: upi,
-            creditSales: credit
-        });
-
+        res.json({ totalSales: total, cashSales: cash, upiSales: upi, creditSales: credit });
     } catch (e) {
-        console.error("Dashboard Error:", e);
         res.status(500).json({ success: false, error: e.message });
     }
 });
 
-// Sales Report API
+// ==========================================
+// 3. SALES REPORT API
+// ==========================================
 router.get('/report/sales', async (req, res) => {
     try {
         const { userMobile, fromDate, toDate } = req.query;
-        const start = new Date(fromDate);
+        const start = new Date(fromDate || new Date());
         start.setHours(0, 0, 0, 0);
-        const end = new Date(toDate);
+        const end = new Date(toDate || new Date());
         end.setHours(23, 59, 59, 999);
 
         const sales = await Invoice.find({

@@ -139,4 +139,24 @@ router.get('/report/sales', async (req, res) => {
     }
 });
 
+// 🗑️ பில்லை கேன்சல் செய்ய அல்லது டெலீட் செய்ய
+router.delete('/:id', async (req, res) => {
+    try {
+        // விருப்பம் 1: பில்லை முழுமையாக அழிக்க (Delete)
+        // await Invoice.findByIdAndDelete(req.params.id);
+
+        // விருப்பம் 2: பில்லை 'Cancelled' என மாற்ற (Professional Way)
+        await Invoice.findByIdAndUpdate(req.params.id, { 
+            status: "Cancelled",
+            totalAmount: 0 // கேன்சல் செய்ததால் அமௌன்ட்டை 0 ஆக்கலாம்
+        });
+
+        res.json({ success: true, message: "Bill Cancelled Successfully!" });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+
+
 module.exports = router;

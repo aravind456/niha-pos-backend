@@ -61,4 +61,4 @@ router.post('/save-bill', async (req, res) => {
     }
 });
 
-module.exports = Invoice; // Inga 'Invoice' ah direct-ah export pannunga
+module.exports = router;

@@ -59,36 +59,47 @@ router.get('/today-sales/:mobile', async (req, res) => {
     try {
         const mobile = req.params.mobile;
 
-        // 1. India Time (IST) padi innaiku date-ah string-ah edukkarom
-        // Ithu Render server-la irunthalum IST date-ah correct-ah yedukkum
-        const todayStr = new Date().toLocaleDateString('en-CA'); // Result: "2026-04-12"
+        // 1. இன்றைய தேதியின் ஆரம்பம் மற்றும் முடிவைக் கணக்கிடுதல் (Date Range)
+        // இதுதான் MongoDB-யில் தேதிகளைத் தேடும் சரியான முறை
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0); // இன்றைய நாள் ஆரம்பம் 12:00 AM
 
-        console.log("Searching for bills on date:", todayStr);
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999); // இன்றைய நாள் முடிவு 11:59 PM
 
-        // 2. Database Query: billDate string-la innaiku date start aagutha nu Regex use panrom
-        // Unga DB-la billDate string-ah irukkurathala ithu thaan correct approach
+        console.log("Searching bills from:", startOfDay, "to", endOfDay);
+
+        // 2. $regex-க்கு பதிலாக $gte (Greater than) மற்றும் $lte (Less than) பயன்படுத்துகிறோம்
         const invoices = await Invoice.find({
             userMobile: mobile,
-            billDate: { $regex: `^${todayStr}` } 
+            billDate: { 
+                $gte: startOfDay, 
+                $lte: endOfDay 
+            }
         });
 
         let total = 0, cash = 0, upi = 0, credit = 0;
 
         invoices.forEach(inv => {
-            // totalAmount field name and paymentMode spelling check (C capital)
             const amount = Number(inv.totalAmount) || 0;
             total += amount;
 
+            // 3. Payment Mode-ஐ பொறுத்து பிரித்துக் கணக்கிடுதல்
             if (inv.paymentMode === 'Cash') {
                 cash += amount;
             } else if (inv.paymentMode === 'UPI') {
                 upi += amount;
             } else if (inv.paymentMode === 'Credit') {
                 credit += amount;
+            } else if (inv.paymentMode === 'Multi') {
+                // Multi ஆக இருந்தால் தனித்தனியாகச் சேர்க்க வேண்டும்
+                cash += Number(inv.cashAmount) || 0;
+                upi += Number(inv.onlineAmount) || 0;
+                credit += Number(inv.creditAmount) || 0;
             }
         });
 
-        // 3. Response-ah Dashboard-ku anupuroam
+        // 4. Response-ஐ ஆப்பிற்கு அனுப்புதல்
         res.json({
             totalSales: total,
             cashSales: cash,

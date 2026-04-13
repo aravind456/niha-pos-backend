@@ -113,4 +113,24 @@ router.get('/today-sales/:mobile', async (req, res) => {
     }
 });
 
+// Sales Report API
+router.get('/report/sales', async (req, res) => {
+    try {
+        const { userMobile, fromDate, toDate } = req.query;
+        const start = new Date(fromDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(toDate);
+        end.setHours(23, 59, 59, 999);
+
+        const sales = await Invoice.find({
+            userMobile: userMobile,
+            billDate: { $gte: start, $lte: end }
+        }).sort({ billDate: -1 });
+
+        res.json(sales);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 module.exports = router;

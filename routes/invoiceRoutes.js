@@ -139,18 +139,16 @@ router.get('/report/sales', async (req, res) => {
     }
 });
 
+// இது கண்டிப்பாக இருக்க வேண்டும்
 router.delete('/:id', async (req, res) => {
     try {
-        await Invoice.findByIdAndUpdate(req.params.id, { 
-            status: "Cancelled", // ஸ்டேட்டஸை மாற்றுகிறோம்
-            totalAmount: 0,
-            cashAmount: 0,
-            onlineAmount: 0,
-            creditAmount: 0
-        });
-        res.json({ success: true, message: "Bill Cancelled!" });
+        const billId = req.params.id;
+        // பில்லை முழுமையாக டெலீட் செய்ய:
+        await Invoice.findByIdAndDelete(billId); 
+        
+        res.json({ success: true, message: "Bill Deleted Successfully" });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ success: false, error: e.message });
     }
 });
 

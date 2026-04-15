@@ -156,7 +156,6 @@ router.get('/report/item-wise', async (req, res) => {
     try {
         const { userMobile, fromDate, toDate } = req.query;
         
-        // தேதியை சரியாக செட் செய்கிறோம்
         const start = new Date(fromDate);
         start.setHours(0, 0, 0, 0);
         const end = new Date(toDate);
@@ -167,17 +166,15 @@ router.get('/report/item-wise', async (req, res) => {
             billDate: { $gte: start, $lte: end }
         });
 
-        console.log(`Found ${invoices.length} bills for today`); // செக் பண்ண பிரிண்ட்
-
         let itemSummary = {};
 
         invoices.forEach(inv => {
-            // உங்கள் பில்லில் 'items' அல்லது 'cartItems' எது இருக்கிறதோ அதை இங்கே கொடுக்கவும்
-            const items = inv.cartItems || inv.items || []; 
+            // நீங்கள் ஸ்கீமாவில் cartItems என்றுதான் வைத்துள்ளீர்கள்
+            const items = inv.cartItems || []; 
             
             items.forEach(item => {
-                // 🟢 முக்கியம்: உங்கள் டேட்டாபேஸில் 'productName' அல்லது 'name' எது இருக்கிறதோ அதை எடுக்கிறோம்
-                const itemName = item.productName || item.name || "Unknown Item";
+                // Flutter-லிருந்து 'name' அல்லது 'productName' என எது வந்தாலும் எடுக்கும்
+                const itemName = item.name || item.productName || "Unknown Item";
                 
                 if (!itemSummary[itemName]) {
                     itemSummary[itemName] = { 
@@ -188,8 +185,10 @@ router.get('/report/item-wise', async (req, res) => {
                     };
                 }
 
-                const q = Number(item.quantity) || 0;
-                const p = Number(item.price) || Number(item.rate) || 0;
+                // 🔴 இங்கே கவனிக்கவும்: உங்கள் Flutter கோடில் 'qty' என்று அனுப்புகிறீர்களா அல்லது 'quantity' ஆ?
+                // அதேபோல 'price' அல்லது 'rate'? இரண்டையுமே செக் செய்கிறோம்:
+                const q = Number(item.quantity) || Number(item.qty) || 0;
+                const p = Number(item.price) || Number(item.rate) || Number(item.sellingPrice) || 0;
 
                 itemSummary[itemName].totalQty += q;
                 itemSummary[itemName].totalAmount += (q * p);
@@ -206,7 +205,6 @@ router.get('/report/item-wise', async (req, res) => {
 
         res.json(Object.values(itemSummary));
     } catch (e) {
-        console.error(e);
         res.status(500).json({ error: e.message });
     }
 });

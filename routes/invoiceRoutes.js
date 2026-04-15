@@ -155,44 +155,58 @@ router.delete('/:id', async (req, res) => {
 router.get('/report/item-wise', async (req, res) => {
     try {
         const { userMobile, fromDate, toDate } = req.query;
+        
+        // தேதியை சரியாக செட் செய்கிறோம்
         const start = new Date(fromDate);
-        start.setHours(0,0,0,0);
+        start.setHours(0, 0, 0, 0);
         const end = new Date(toDate);
-        end.setHours(23,59,59,999);
+        end.setHours(23, 59, 59, 999);
 
-        // பில்களைத் தேடுகிறோம்
         const invoices = await Invoice.find({
-            userMobile,
+            userMobile: userMobile,
             billDate: { $gte: start, $lte: end }
         });
+
+        console.log(`Found ${invoices.length} bills for today`); // செக் பண்ண பிரிண்ட்
 
         let itemSummary = {};
 
         invoices.forEach(inv => {
-            inv.cartItems.forEach(item => {
-                const name = item.productName; // அல்லது item.name
-                if (!itemSummary[name]) {
-                    itemSummary[name] = { 
-                        name: name, 
+            // உங்கள் பில்லில் 'items' அல்லது 'cartItems' எது இருக்கிறதோ அதை இங்கே கொடுக்கவும்
+            const items = inv.cartItems || inv.items || []; 
+            
+            items.forEach(item => {
+                // 🟢 முக்கியம்: உங்கள் டேட்டாபேஸில் 'productName' அல்லது 'name' எது இருக்கிறதோ அதை எடுக்கிறோம்
+                const itemName = item.productName || item.name || "Unknown Item";
+                
+                if (!itemSummary[itemName]) {
+                    itemSummary[itemName] = { 
+                        name: itemName, 
                         totalQty: 0, 
                         totalAmount: 0,
                         history: [] 
                     };
                 }
-                itemSummary[name].totalQty += Number(item.quantity);
-                itemSummary[name].totalAmount += (Number(item.quantity) * Number(item.price));
-                itemSummary[name].history.push({
+
+                const q = Number(item.quantity) || 0;
+                const p = Number(item.price) || Number(item.rate) || 0;
+
+                itemSummary[itemName].totalQty += q;
+                itemSummary[itemName].totalAmount += (q * p);
+                
+                itemSummary[itemName].history.push({
                     date: inv.billDate,
                     billNo: inv.billNo,
-                    customer: inv.customerName,
-                    qty: item.quantity,
-                    price: item.price
+                    customer: inv.customerName || "Cash",
+                    qty: q,
+                    price: p
                 });
             });
         });
 
         res.json(Object.values(itemSummary));
     } catch (e) {
+        console.error(e);
         res.status(500).json({ error: e.message });
     }
 });

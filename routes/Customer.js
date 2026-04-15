@@ -20,11 +20,30 @@ router.post('/add-customer', async (req, res) => {
 router.get('/get-customers/:userMobile', async (req, res) => {
     try {
         const customers = await Customer.find({ userMobile: req.params.userMobile }).sort({ name: 1 });
-        res.status(200).json(customers);
+        
+        // டேட்டா அனுப்பும் முன் மொபைல் நம்பர் செக்
+        const formattedCustomers = customers.map(c => {
+            const customerObj = c.toObject();
+            // இதில் 'mobile' அல்லது 'customerMobile' - உங்கள் மாடலில் உள்ள பெயரைக் கொடுங்கள்
+            customerObj.mobile = customerObj.mobile || customerObj.customerMobile || "No Number";
+            return customerObj;
+        });
+
+        res.status(200).json(formattedCustomers);
     } catch (err) { 
         res.status(500).json({ error: "Fetch failed" }); 
     }
 });
+
+// GET CUSTOMERS
+//router.get('/get-customers/:userMobile', async (req, res) => {
+//    try {
+//        const customers = await Customer.find({ userMobile: req.params.userMobile }).sort({ name: 1 });
+//        res.status(200).json(customers);
+//    } catch (err) { 
+//        res.status(500).json({ error: "Fetch failed" }); 
+//    }
+//});
 
 /// UPDATE CUSTOMER
 router.put('/update-customer/:id', async (req, res) => {

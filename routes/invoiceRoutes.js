@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const invoiceSchema = new mongoose.Schema({
     userMobile: { type: String, required: true },
     billNo: { type: String, required: true },
+    customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' }, // இது மிக முக்கியம்
     customerName: String,
     customerMobile: String,
     salesmanName: String,
@@ -33,6 +34,20 @@ try {
 }
 
 // ==========================================
+// 1. ஒரு கஸ்டமரின் பில்களை மட்டும் எடுக்க (Ledger-க்காக)
+// ==========================================
+router.get('/customer-bills/:customerId', async (req, res) => {
+    try {
+        const bills = await Invoice.find({ 
+            customerId: req.params.customerId 
+        }).sort({ billDate: -1 });
+        res.status(200).json(bills);
+    } catch (err) {
+        res.status(500).json({ error: "Fetch failed" });
+    }
+});
+
+// ==========================================
 // 1. SAVE BILL API
 // ==========================================
 router.post('/save-bill', async (req, res) => {
@@ -41,7 +56,7 @@ router.post('/save-bill', async (req, res) => {
             return res.status(400).json({ success: false, message: "userMobile is required!" });
         }
 
-        const lastInvoice = await Invoice.findOne({ userMobile: req.body.userMobile }).sort({ _id: -1 });
+        const lastInvoice = await Invoice.findOne({ userMobile: req.body.userMobile }).sort({ billNo: -1 }); //id
         let nextBillNo = "1"; 
         
         if (lastInvoice && lastInvoice.billNo) {
@@ -62,13 +77,12 @@ router.post('/save-bill', async (req, res) => {
 
         // Customer Ledger Update (If Credit)
         if (req.body.creditAmount > 0 && req.body.customerId) {
-            try {
-                await Customer.findByIdAndUpdate(
-    req.body.customerId, 
-    { $inc: { openingBalance: req.body.creditAmount } } // totalDue-க்கு பதில் openingBalance
-);
-            } catch (err) { console.log("Ledger update failed"); }
-        }
+            await Customer.findByIdAndUpdate(
+                req.body.customerId, 
+                { $inc: { openingBalance: req.body.creditAmount } }
+            );
+            } 
+        
 
         res.status(201).json({ 
             success: true, 

@@ -152,4 +152,49 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+router.get('/report/item-wise', async (req, res) => {
+    try {
+        const { userMobile, fromDate, toDate } = req.query;
+        const start = new Date(fromDate);
+        start.setHours(0,0,0,0);
+        const end = new Date(toDate);
+        end.setHours(23,59,59,999);
+
+        // பில்களைத் தேடுகிறோம்
+        const invoices = await Invoice.find({
+            userMobile,
+            billDate: { $gte: start, $lte: end }
+        });
+
+        let itemSummary = {};
+
+        invoices.forEach(inv => {
+            inv.cartItems.forEach(item => {
+                const name = item.productName; // அல்லது item.name
+                if (!itemSummary[name]) {
+                    itemSummary[name] = { 
+                        name: name, 
+                        totalQty: 0, 
+                        totalAmount: 0,
+                        history: [] 
+                    };
+                }
+                itemSummary[name].totalQty += Number(item.quantity);
+                itemSummary[name].totalAmount += (Number(item.quantity) * Number(item.price));
+                itemSummary[name].history.push({
+                    date: inv.billDate,
+                    billNo: inv.billNo,
+                    customer: inv.customerName,
+                    qty: item.quantity,
+                    price: item.price
+                });
+            });
+        });
+
+        res.json(Object.values(itemSummary));
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 module.exports = router;

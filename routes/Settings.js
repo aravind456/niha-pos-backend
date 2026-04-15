@@ -14,7 +14,11 @@ router.get('/:userMobile', async (req, res) => {
             settings = new Settings({ 
                 userMobile: req.params.userMobile,
                 adminPin: "1234", // Default PIN
-                shopName: "My Shop" 
+                shopName: "My Shop",
+                lockCustomer: false,
+                lockProduct: false,
+                lockBilling: false,
+                lockSales: false
             });
             await settings.save();
         }

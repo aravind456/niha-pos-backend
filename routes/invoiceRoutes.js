@@ -64,9 +64,9 @@ router.post('/save-bill', async (req, res) => {
         if (req.body.creditAmount > 0 && req.body.customerId) {
             try {
                 await Customer.findByIdAndUpdate(
-                    req.body.customerId, 
-                    { $inc: { totalDue: req.body.creditAmount } }
-                );
+    req.body.customerId, 
+    { $inc: { openingBalance: req.body.creditAmount } } // totalDue-க்கு பதில் openingBalance
+);
             } catch (err) { console.log("Ledger update failed"); }
         }
 

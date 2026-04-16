@@ -136,18 +136,23 @@ app.post('/login', async (req, res) => {
         const user = await User.findOne({ mobile, password });
         
         if (user) {
-            // --- DEVICE LOCK LOGIC START ---
-            // Oru vaela user munnadiye login pannirundha, andha mobile ID check panrom
-            if (user.deviceId && user.deviceId !== deviceId) {
-                return res.status(403).send({ 
-                    error: "Device Lock!", 
-                    message: "Indha account munnadiye vera mobile-la login aagi irukku." 
-                });
-            }
+            // --- MULTI-DEVICE COUNT LOGIC ---
+            
+            // 1. Intha device munnadiye login aagi irukka?
+            let isAlreadyLoggedIn = user.loggedInDevices.includes(deviceId);
 
-            // Mudhal vaati login panraaga na, indha mobile ID-ah fix panniduvom
-            if (!user.deviceId) {
-                user.deviceId = deviceId;
+            if (!isAlreadyLoggedIn) {
+                // 2. Pudhu device na, limit check pannu
+                // Example: deviceLimit 2-nu vacha, 2 device mela allow pannaathu
+                if (user.loggedInDevices.length >= (user.deviceLimit || 1)) {
+                    return res.status(403).send({ 
+                        error: "Limit Exceeded!", 
+                        message: `Ungalukku ${user.deviceLimit} device mattum dhaan allow pannapattu irukku. Vera device-la logout pannunga.` 
+                    });
+                }
+
+                // 3. Limit kulla irundha, intha pudhu device ID-ai add pannu
+                user.loggedInDevices.push(deviceId);
                 await user.save();
             }
             // --- DEVICE LOCK LOGIC END ---

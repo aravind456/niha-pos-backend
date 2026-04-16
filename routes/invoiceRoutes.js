@@ -79,7 +79,7 @@ router.post('/save-bill', async (req, res) => {
         if (req.body.creditAmount > 0 && req.body.customerId) {
             await Customer.findByIdAndUpdate(
                 req.body.customerId, 
-                { $inc: { openingBalance: req.body.creditAmount } }
+                { $inc: { currentBalance: req.body.creditAmount } }
             );
             } 
         

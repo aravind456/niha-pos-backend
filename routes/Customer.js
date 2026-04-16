@@ -24,8 +24,12 @@ router.get('/get-customers/:userMobile', async (req, res) => {
         // டேட்டா அனுப்பும் முன் மொபைல் நம்பர் செக்
         const formattedCustomers = customers.map(c => {
             const customerObj = c.toObject();
+            const opening = Number(customerObj.openingBalance) || 0;
+            const current = Number(customerObj.currentBalance) || 0;
+            customerObj.totalBalance = opening + current; // Inga kooti anupurom
             // இதில் 'mobile' அல்லது 'customerMobile' - உங்கள் மாடலில் உள்ள பெயரைக் கொடுங்கள்
-            customerObj.mobile = customerObj.mobile || customerObj.customerMobile || "No Number";
+            //customerObj.mobile = customerObj.mobile || customerObj.customerMobile || "No Number";
+            customerObj.mobile = customerObj.mobileNumber || customerObj.mobile || "No Number";
             return customerObj;
         });
 

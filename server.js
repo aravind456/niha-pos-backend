@@ -135,32 +135,26 @@ app.post('/login', async (req, res) => {
     try {
         const user = await User.findOne({ mobile, password });
         
-        if (!user) {
-            return res.status(401).send({ error: "Invalid login!" });
-        }
-
-        // --- SAFE MULTI-DEVICE LOGIC ---
-        // Unga DB-la array illana kooda crash aagathu
-        let devices = user.loggedInDevices || []; 
-
-        let isAlreadyLoggedIn = devices.includes(deviceId);
-
-        if (!isAlreadyLoggedIn) {
-            let limit = user.deviceLimit || 1;
+        if (user) {
+            // --- MULTI-DEVICE COUNT LOGIC ---
             
-            if (devices.length >= limit) {
-                return res.status(403).send({ 
-                    error: "Limit Exceeded!", 
-                    message: `Ungalukku ${limit} device mattum dhaan allow.` 
-                });
-            }
+            // 1. Intha device munnadiye login aagi irukka?
+            let isAlreadyLoggedIn = user.loggedInDevices.includes(deviceId);
 
-            // Direct-ah push pannama, clear-ah update panrom
-            await User.updateOne(
-                { _id: user._id },
-                { $addToSet: { loggedInDevices: deviceId } } // $addToSet double entry-ai thadukkum
-            );
-        }
+            if (!isAlreadyLoggedIn) {
+                // 2. Pudhu device na, limit check pannu
+                // Example: deviceLimit 2-nu vacha, 2 device mela allow pannaathu
+                if (user.loggedInDevices.length >= (user.deviceLimit || 1)) {
+                    return res.status(403).send({ 
+                        error: "Limit Exceeded!", 
+                        message: `Ungalukku ${user.deviceLimit} device mattum dhaan allow pannapattu irukku. Vera device-la logout pannunga.` 
+                    });
+                }
+
+                // 3. Limit kulla irundha, intha pudhu device ID-ai add pannu
+                user.loggedInDevices.push(deviceId);
+                await user.save();
+            }
             // --- DEVICE LOCK LOGIC END ---
 
             // Unga old Expiry logic...
@@ -186,10 +180,11 @@ app.post('/login', async (req, res) => {
         }
     }
              });
-        } catch (err) {
-        // Ithu dhaan mukkiam: Terminal-la ena error-nu ippo print aagum
-        console.log("SERVER CRASHED BECAUSE:", err.message);
-        res.status(500).send({ error: "Server Error", logicError: err.message });
+        } else {
+            res.status(401).send({ error: "Invalid login!" });
+        }
+    } catch (err) {
+        res.status(500).send({ error: "Server Error" });
     }
 });
 

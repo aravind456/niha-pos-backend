@@ -108,26 +108,45 @@ router.get('/today-sales/:mobile', async (req, res) => {
 
         const invoices = await Invoice.find({
             userMobile: mobile,
-            billDate: { $gte: startOfDay, $lte: endOfDay }
+            billDate: { $gte: start, $lte: end }
         });
 
         let total = 0, cash = 0, upi = 0, credit = 0;
+
         invoices.forEach(inv => {
-            const amount = Number(inv.totalAmount) || 0;
-            total += amount;
-            if (inv.paymentMode === 'Cash') cash += amount;
-            else if (inv.paymentMode === 'UPI') upi += amount;
-            else if (inv.paymentMode === 'Credit') credit += amount;
-            else if (inv.paymentMode === 'Multi') {
+            const billTotal = Number(inv.totalAmount) || 0;
+            
+            // Payment Mode-ai small letters-ah mathi check pandrom (Error varama irukka)
+            const mode = (inv.paymentMode || "").toLowerCase();
+
+            if (mode === 'multi') {
                 cash += Number(inv.cashAmount) || 0;
                 upi += Number(inv.onlineAmount) || 0;
                 credit += Number(inv.creditAmount) || 0;
+                total += (Number(inv.cashAmount) || 0) + (Number(inv.onlineAmount) || 0) + (Number(inv.creditAmount) || 0);
+            } else if (mode === 'cash') {
+                cash += billTotal;
+                total += billTotal;
+            } else if (mode === 'upi' || mode === 'online') {
+                upi += billTotal;
+                total += billTotal;
+            } else if (mode === 'credit') {
+                credit += billTotal;
+                total += billTotal;
             }
         });
 
-        res.json({ totalSales: total, cashSales: cash, upiSales: upi, creditSales: credit });
+        // 3. FINALLY SEND DATA
+        res.status(200).json({ 
+            totalSales: total, 
+            cashSales: cash, 
+            upiSales: upi, 
+            creditSales: credit 
+        });
+
     } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
+        console.error("Dashboard Error:", e.message);
+        res.status(500).json({ error: "Server error occurred" });
     }
 });
 

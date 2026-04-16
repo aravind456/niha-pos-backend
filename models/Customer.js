@@ -5,6 +5,7 @@ const customerSchema = new mongoose.Schema({
     customerCode: { type: String, required: true }, // Inga 'required' sethukonga
     name: { type: String, required: true },
     openingBalance: { type: Number, default: 0 },
+    currentBalance: { type: Number, default: 0 },
     address1: String,
     address2: String,
     address3: String,

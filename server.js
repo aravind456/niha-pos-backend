@@ -184,7 +184,7 @@ app.post('/login', async (req, res) => {
             res.status(401).send({ error: "Invalid login!" });
         }
     } catch (err) {
-        res.status(500).send({ error: "Server Error" });
+        res.status(500).send({ error: "Server Error1" });
     }
 });
 

@@ -125,46 +125,50 @@ app.post('/register', async (req, res) => {
 });
 
 app.post('/login', async (req, res) => {
-    // 1. Flutter-la irundhu deviceId-yum anupanum
     const { mobile, password, deviceId } = req.body; 
-    
+
     if (!deviceId) {
         return res.status(400).send({ error: "Device ID Missing!" });
     }
-    
+
     try {
         const user = await User.findOne({ mobile, password });
-        
-        if (user) {
-            // --- MULTI-DEVICE COUNT LOGIC ---
+
+        if (!user) {
+            return res.status(401).send({ error: "Invalid login!" });
+        }
+
+        // --- SAFE MULTI-DEVICE LOGIC ---
+        // Unga DB-la array illana kooda crash aagathu
+        let devices = user.loggedInDevices || []; 
+
+        let isAlreadyLoggedIn = devices.includes(deviceId);
+
+        if (!isAlreadyLoggedIn) {
+            let limit = user.deviceLimit || 1;
             
-            // 1. Intha device munnadiye login aagi irukka?
-            let isAlreadyLoggedIn = user.loggedInDevices.includes(deviceId);
-
-            if (!isAlreadyLoggedIn) {
-                // 2. Pudhu device na, limit check pannu
-                // Example: deviceLimit 2-nu vacha, 2 device mela allow pannaathu
-                if (user.loggedInDevices.length >= (user.deviceLimit || 1)) {
-                    return res.status(403).send({ 
-                        error: "Limit Exceeded!", 
-                        message: `Ungalukku ${user.deviceLimit} device mattum dhaan allow pannapattu irukku. Vera device-la logout pannunga.` 
-                    });
-                }
-
-                // 3. Limit kulla irundha, intha pudhu device ID-ai add pannu
-                user.loggedInDevices.push(deviceId);
-                await user.save();
-            }
-            // --- DEVICE LOCK LOGIC END ---
-
-            // Unga old Expiry logic...
-            let today = new Date();
-            if (!user.isPremium && user.expiryDate && today > user.expiryDate) {
+            if (devices.length >= limit) {
                 return res.status(403).send({ 
-                    error: "Trial Expired!", 
-                    message: "Trial Expired! Please contact admin..." 
+                    error: "Limit Exceeded!", 
+                    message: `Ungalukku ${limit} device mattum dhaan allow.` 
                 });
             }
+
+            // Direct-ah push pannama, clear-ah update panrom
+            await User.updateOne(
+                { _id: user._id },
+                { $addToSet: { loggedInDevices: deviceId } } // $addToSet double entry-ai thadukkum
+            );
+        }
+
+        // --- EXPIRY CHECK ---
+        let today = new Date();
+        if (!user.isPremium && user.expiryDate && today > new Date(user.expiryDate)) {
+            return res.status(403).send({ 
+                error: "Trial Expired!", 
+                message: "Please contact admin." 
+            });
+        }
 
             res.status(200).send({ message: "Login Success!", 
                 
@@ -178,13 +182,13 @@ app.post('/login', async (req, res) => {
             shopName: user.shopDetails?.shopName || user.name,
             expiryDate: user.expiryDate // <--- Intha line mukkiam!
         }
-    }
-             });
-        } else {
-            res.status(401).send({ error: "Invalid login!" });
-        }
+            }
+        });
+
     } catch (err) {
-        res.status(500).send({ error: "Server Error" });
+        // Ithu dhaan mukkiam: Terminal-la ena error-nu ippo print aagum
+        console.log("SERVER CRASHED BECAUSE:", err.message);
+        res.status(500).send({ error: "Server Error", logicError: err.message });
     }
 });
 

@@ -36,7 +36,7 @@ try {
     const supplierRoutes = require('./routes/Supplier');
     const settingsRoutes = require('./routes/Settings');
     const invoiceRoutes = require('./routes/invoiceRoutes'); 
-    const purchaseRoutes = require('./routes/Purchase');
+    const purchaseRoutes = require('./routes/purchaseRoutes');
 
 
 

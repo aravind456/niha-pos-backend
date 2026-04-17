@@ -1,30 +1,75 @@
 const express = require('express');
 const router = express.Router();
-const Purchase = require('../models/Purchase'); // Model import
-const Product = require('../models/Product');   // Stock update panna mukkiam
-const mongoose = require('mongoose');
+const Purchase = require('../models/Purchase'); 
+const Product = require('../models/Product');
 
-
-// SAVE PURCHASE ENTRY
-router.post('/bulk-add', async (req, res) => {
+// 1. SAVE PURCHASE (Pudhu entry podumbodhu stock egharum)
+router.post('/save-purchase', async (req, res) => {
     try {
-        const { userMobile, items } = req.body;
-
-        // 1. Database-la Purchase save panrom
         const newPurchase = new Purchase(req.body);
-        await newPurchase.save();
+        const savedPurchase = await newPurchase.save();
 
-        // 2. Stock Update Logic
-        for (let item of items) {
+        // STOCK UPDATE: Purchase panna stock increase aaganum
+        for (let item of req.body.items) {
             await Product.findOneAndUpdate(
-                { _id: item.id, userMobile: userMobile },
-                { $inc: { stock: item.qty } } // Stock increase aagum
+                { _id: item.id, userMobile: req.body.userMobile },
+                { $inc: { stock: item.qty } } 
+            );
+        }
+        res.status(201).json({ success: true, message: "Purchase Saved & Stock Updated!" });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
+    }
+});
+
+// 2. DELETE PURCHASE (Entry-ai delete panna, antha stock-ai thirumba kuraikkanum)
+router.delete('/:id', async (req, res) => {
+    try {
+        const purchase = await Purchase.findById(req.params.id);
+        if (!purchase) return res.status(404).json({ message: "Not found" });
+
+        // STOCK REVERSE: Vaanguna item-ai delete panna stock-la irundhu kuraikkanum
+        for (let item of purchase.items) {
+            await Product.findOneAndUpdate(
+                { _id: item.id, userMobile: purchase.userMobile },
+                { $inc: { stock: -item.qty } } // Minus panrom
             );
         }
 
-        res.status(200).json({ success: true, message: "Purchase saved & Stock updated!" });
-    } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        await Purchase.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: "Purchase Deleted & Stock Adjusted!" });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// 3. MODIFY/UPDATE PURCHASE (Idhu konjam complex - Pazhaya stock-ai reset panni pudhusu add pannanum)
+router.put('/:id', async (req, res) => {
+    try {
+        const oldPurchase = await Purchase.findById(req.params.id);
+        
+        // A. Pazhaya stock-ai reverse pannunga (Minus)
+        for (let item of oldPurchase.items) {
+            await Product.findOneAndUpdate(
+                { _id: item.id, userMobile: oldPurchase.userMobile },
+                { $inc: { stock: -item.qty } }
+            );
+        }
+
+        // B. Pudhu data-ai update pannunga
+        const updatedPurchase = await Purchase.findByIdAndUpdate(req.params.id, req.body, { new: true });
+
+        // C. Pudhu stock-ai add pannunga (Plus)
+        for (let item of updatedPurchase.items) {
+            await Product.findOneAndUpdate(
+                { _id: item.id, userMobile: updatedPurchase.userMobile },
+                { $inc: { stock: item.qty } }
+            );
+        }
+
+        res.json({ success: true, message: "Purchase Updated & Stock Re-adjusted!" });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
 

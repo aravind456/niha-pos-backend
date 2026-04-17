@@ -4,7 +4,7 @@ const Purchase = require('../models/Purchase');
 const Product = require('../models/Product');
 
 // 1. SAVE PURCHASE (Pudhu entry podumbodhu stock egharum)
-router.post('/bulk-add', async (req, res) => {
+router.post('/save-purchase', async (req, res) => {
     try {
         const newPurchase = new Purchase(req.body);
         const savedPurchase = await newPurchase.save();

@@ -53,5 +53,36 @@ router.delete('/delete-product/:id', async (req, res) => {
         res.status(400).json({ error: "Delete failed" });
     }
 });
+
+// PURCHASE ENTRY ROUTE
+router.post('/add-purchase', async (req, res) => {
+    try {
+        const { userMobile, productId, purchaseQuantity, purchaseRate } = req.body;
+
+        // 1. Find the product
+        const product = await Product.findById(productId);
+        if (!product) return res.status(404).json({ message: "Product not found" });
+
+        // 2. Logic: Opening stock-ai distrub pannama, 'stock' field-la add panrom
+        // Total Stock = openingStock + (Existing Stock + New Purchase)
+        const newStockTotal = product.stock + parseFloat(purchaseQuantity);
+
+        // 3. Update Product (Purchase rate kooda update aagalaam optional-ah)
+        product.stock = newStockTotal;
+        if(purchaseRate) product.purchaseRate = purchaseRate;
+
+        await product.save();
+
+        res.status(200).json({ 
+            message: "Purchase Updated Successfully!", 
+            currentStock: product.stock,
+            openingStock: product.openingStock 
+        });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 // MUKKIYAM: Ithai marakkama kadaisiyila podunga
 module.exports = router;
+

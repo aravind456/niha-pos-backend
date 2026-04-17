@@ -75,26 +75,32 @@ router.put('/:id', async (req, res) => {
 });
 
 // 4. GET ALL PURCHASES (With Supplier Name)
+// 4. GET ALL PURCHASES WITH FILTERS
 router.get('/get-purchases/:userMobile', async (req, res) => {
     try {
-        const { fromDate, toDate } = req.query;
-        let query = { userMobile: req.params.userMobile };
+        const { userMobile } = req.params;
+        const { fromDate, toDate } = req.query; // Query params-ah edukrom
 
+        let query = { userMobile: userMobile };
+
+        // Date filter irundha query-la sethukonga
         if (fromDate && toDate) {
-            // "2026-04-18" range filter
             query.date = { 
-                $gte: fromDate, 
-                $lte: toDate 
+                $gte: fromDate, // 2026-04-18-vida athigama
+                $lte: toDate    // 2026-04-18-vida kammiya
             };
         }
 
+        console.log("Searching for Query:", query); // Check panna log
+
         const purchases = await Purchase.find(query)
-            .populate('supplierId', 'name')
-            .sort({ date: -1 }); // Date wise-ah sort pannum
+            .populate('supplierId', 'name city')
+            .sort({ date: -1 });
 
         res.json(purchases);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        console.error("Backend Error:", e.message);
+        res.status(500).json({ success: false, message: e.message });
     }
 });
 

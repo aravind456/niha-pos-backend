@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const Purchase = require('../models/Purchase'); // Model import
 const Product = require('../models/Product');   // Stock update panna mukkiam
+const mongoose = require('mongoose');
+
 
 // SAVE PURCHASE ENTRY
 router.post('/bulk-add', async (req, res) => {

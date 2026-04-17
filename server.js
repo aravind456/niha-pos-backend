@@ -46,6 +46,7 @@ try {
     app.use('/api/suppliers', supplierRoutes);
     app.use('/api/settings', settingsRoutes);
     app.use('/api/invoices', invoiceRoutes);
+    app.use('/api/purchases', purchaseRoutes);
 
 
 } catch (e) {
@@ -227,8 +228,10 @@ app.post('/update-shop', async (req, res) => {
     }
 });
 
+
+const purchaseRoutes = express.Router();
 // Purchase Save + Stock Update Route
-router.post('/purchases/bulk-add', async (req, res) => {
+purchaseRoutes.post('/bulk-add', async (req, res) => {
     try {
         const { userMobile, supplierId, billNo, items, totalAmount, paymentType, date } = req.body;
 

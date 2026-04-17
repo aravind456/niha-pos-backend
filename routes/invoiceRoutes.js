@@ -242,4 +242,17 @@ router.get('/report/item-wise', async (req, res) => {
     }
 });
 
+router.get('/customer-history/:userMobile/:customerName', async (req, res) => {
+    try {
+        const { userMobile, customerName } = req.params;
+        const history = await Invoice.find({ 
+            userMobile: userMobile, 
+            customerName: customerName 
+        }).sort({ billDate: -1 });
+        res.json(history);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 module.exports = router;

@@ -80,8 +80,8 @@ router.get('/get-purchases/:userMobile', async (req, res) => {
         const { fromDate, toDate } = req.query;
         let query = { userMobile: req.params.userMobile };
 
-        // Date range filter sethukko
         if (fromDate && toDate) {
+            // "2026-04-18" range filter
             query.date = { 
                 $gte: fromDate, 
                 $lte: toDate 
@@ -90,11 +90,11 @@ router.get('/get-purchases/:userMobile', async (req, res) => {
 
         const purchases = await Purchase.find(query)
             .populate('supplierId', 'name')
-            .sort({ createdAt: -1 });
+            .sort({ date: -1 }); // Date wise-ah sort pannum
 
         res.json(purchases);
     } catch (e) {
-      res.status(500).json({ error: e.message });
+        res.status(500).json({ error: e.message });
     }
 });
 

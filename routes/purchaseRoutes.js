@@ -47,6 +47,7 @@ router.delete('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         const oldPurchase = await Purchase.findById(req.params.id);
+        if (!oldPurchase) return res.status(404).json({ message: "Purchase history not found!" });
         
         // A. Pazhaya stock-ai reverse pannunga (Minus)
         for (let item of oldPurchase.items) {

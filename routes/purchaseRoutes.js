@@ -80,21 +80,17 @@ router.get('/get-purchases/:userMobile', async (req, res) => {
         const { userMobile } = req.params;
         const { fromDate, toDate } = req.query;
 
-        // Sales logic-la irukara mathiriye mobile number filter
         let query = { userMobile: userMobile };
 
         if (fromDate && toDate) {
-            // Purchase-la 'date' field String-ah irukarthala 
-            // 'new Date()' poodama direct-ah string-ah match panrom
-            query.date = { 
-                $gte: fromDate, // Example: "2026-04-11"
-                $lte: toDate    // Example: "2026-04-18"
-            };
+            // DB-la format "DD-MM-YYYY" nu irundha, 
+            // Inga string matching correct-ah irukanum.
+            query.date = { $gte: fromDate, $lte: toDate };
         }
 
         const purchases = await Purchase.find(query)
-            .populate('supplierId', 'name city') // Supplier Name vara idhu mukkiam
-            .sort({ date: -1 });
+            .populate('supplierId', 'name')
+            .sort({ createdAt: -1 }); // 'date' string-ah irukarthala 'createdAt' vachi sort pannunga
 
         res.json(purchases);
     } catch (e) {

@@ -36,7 +36,7 @@ try {
     const supplierRoutes = require('./routes/Supplier');
     const settingsRoutes = require('./routes/Settings');
     const invoiceRoutes = require('./routes/invoiceRoutes'); 
-    
+    const purchaseRoutes = require('./routes/Purchase');
 
 
 
@@ -225,40 +225,6 @@ app.post('/update-shop', async (req, res) => {
         });
     } catch (err) {
         res.status(500).send({ error: "Server Error", details: err.message });
-    }
-});
-
-
-const purchaseRoutes = express.Router();
-// Purchase Save + Stock Update Route
-purchaseRoutes.post('/bulk-add', async (req, res) => {
-    try {
-        const { userMobile, supplierId, billNo, items, totalAmount, paymentType, date } = req.body;
-
-        // 1. Purchase Record Create Panrom
-        const newPurchase = new Purchase({
-            userMobile,
-            supplierId,
-            billNo,
-            items,
-            totalAmount,
-            paymentType,
-            date
-        });
-        await newPurchase.save();
-
-        // 2. STOCK UPDATE LOGIC (Mukkiam!)
-        // Ovvoru item-kum stock-ai increase panrom
-        for (let item of items) {
-            await Product.findOneAndUpdate(
-                { _id: item.id, userMobile: userMobile }, // Antha product-ai kandupidi
-                { $inc: { stock: item.qty } }             // Stock-ai qty sethu increase pannu
-            );
-        }
-
-        res.status(200).json({ success: true, message: "Purchase & Stock Updated!" });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
     }
 });
 

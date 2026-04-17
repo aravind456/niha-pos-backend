@@ -74,4 +74,28 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+// 4. GET ALL PURCHASES (With Supplier Name)
+router.get('/get-purchases/:userMobile', async (req, res) => {
+    try {
+        const { fromDate, toDate } = req.query;
+        let query = { userMobile: req.params.userMobile };
+
+        // Date range filter sethukko
+        if (fromDate && toDate) {
+            query.date = { 
+                $gte: fromDate, 
+                $lte: toDate 
+            };
+        }
+
+        const purchases = await Purchase.find(query)
+            .populate('supplierId', 'name')
+            .sort({ createdAt: -1 });
+
+        res.json(purchases);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+});
+
 module.exports = router;

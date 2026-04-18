@@ -151,16 +151,6 @@ router.get('/outstanding-bills/:supplierId', async (req, res) => {
     res.json(bills);
 });
 
-router.get('/customer-bills/:customerId', async (req, res) => {
-    try {
-        const bills = await Purchase.find({ 
-            supplierId: req.params.customerId, 
-            paymentType: "Credit" // 👈 Check your DB image, it's 'paymentType'
-        }).sort({ createdAt: -1 }); 
-        res.json(bills);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
+
 
 module.exports = router;

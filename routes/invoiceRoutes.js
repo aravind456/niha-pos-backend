@@ -40,15 +40,19 @@ try {
 // Purchase history fetch panna indha route-ai use pannunga
 router.get('/customer-bills/:customerId', async (req, res) => {
     try {
-        // Database-la 'supplierId' nu field irukku (image_18d1ec.png paarunga)
-        // Adhanaala customerId-ai supplierId-ah match pannanum
-        const bills = await Purchase.find({ 
-            supplierId: req.params.customerId, 
-            paymentType: "Credit" // Schema-la paymentType nu dhaan irukku
-        }).sort({ createdAt: -1 }); 
+        const { customerId } = req.params;
         
-        res.json(bills);
+        // 1. Inga model name 'Invoice' ah nu check pannunga (Customer-ku Invoice dhaan varum)
+        // 2. Field name 'customerId' correct-ah nu check pannunga
+        const bills = await Invoice.find({ 
+            customerId: customerId, 
+            paymentType: "Credit" 
+        }).sort({ date: -1 }); // 'createdAt' ku badhula 'date' use pannunga
+        
+        res.status(200).json(bills);
     } catch (e) {
+        // Error 500 vara munnadi terminal-la enna error nu print aagum
+        console.log("Error in customer-bills:", e.message); 
         res.status(500).json({ error: e.message });
     }
 });

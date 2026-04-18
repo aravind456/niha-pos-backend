@@ -42,15 +42,15 @@ router.get('/customer-bills/:customerId', async (req, res) => {
     try {
         const { customerId } = req.params;
 
-        // ID valid-ah nu check panni ObjectId-ah maathunga
         if (!mongoose.Types.ObjectId.isValid(customerId)) {
             return res.status(400).json({ error: "Invalid Customer ID format" });
         }
 
         const bills = await Invoice.find({ 
             customerId: new mongoose.Types.ObjectId(customerId), 
-            paymentType: "Credit" 
-        }).sort({ date: -1 });
+            // 🔴 Schema-la 'paymentMode' nu irukku, 'paymentType' illa
+            paymentMode: "Credit" 
+        }).sort({ billDate: -1 }); // 'date' ku badhula 'billDate' use pannunga
         
         res.json(bills);
     } catch (e) {

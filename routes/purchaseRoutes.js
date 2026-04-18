@@ -151,6 +151,21 @@ router.get('/outstanding-bills/:supplierId', async (req, res) => {
     res.json(bills);
 });
 
+// purchases.js file-oda kadaisiyila (module.exports-ku munnadi) idhai sethudunga
+router.get('/customer-bills/:supplierId', async (req, res) => {
+    try {
+        const { supplierId } = req.params;
+        const bills = await Purchase.find({ 
+            supplierId: supplierId, 
+            paymentType: "Credit" 
+        }).sort({ date: -1 }); 
+        
+        res.json(bills);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 
 
 module.exports = router;

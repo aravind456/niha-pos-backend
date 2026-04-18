@@ -111,4 +111,19 @@ router.get('/customer-history/:userMobile/:customerName', async (req, res) => {
     }
 });
 
+// 🟢 Specific Supplier History edukka pudhu API
+router.get('/supplier-history/:userMobile/:supplierId', async (req, res) => {
+    try {
+        const { userMobile, supplierId } = req.params;
+        const history = await Purchase.find({ 
+            userMobile: userMobile, 
+            supplierId: supplierId  // Idhai vachi filter panrom
+        }).sort({ createdAt: -1 });
+        
+        res.json(history);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 module.exports = router;

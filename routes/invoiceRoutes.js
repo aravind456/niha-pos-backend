@@ -256,4 +256,19 @@ router.get('/customer-history/:userMobile/:customerName', async (req, res) => {
     }
 });
 
+// routes/invoiceRoutes.js
+
+router.get('/customer-outstanding/:customerId', async (req, res) => {
+    try {
+        const bills = await Invoice.find({ 
+            customerId: req.params.customerId, 
+            paymentType: "Credit" 
+        }).sort({ createdAt: -1 }); // Pudhu bill mela varum
+        
+        res.json(bills);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 module.exports = router;

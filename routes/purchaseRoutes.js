@@ -143,4 +143,12 @@ router.get('/supplier-history/:userMobile/:supplierId', async (req, res) => {
     }
 });
 
+router.get('/outstanding-bills/:supplierId', async (req, res) => {
+    const bills = await Purchase.find({ 
+        supplierId: req.params.supplierId, 
+        paymentType: "Credit" 
+    }).sort({ createdAt: -1 });
+    res.json(bills);
+});
+
 module.exports = router;

@@ -5,6 +5,7 @@ const SupplierSchema = new mongoose.Schema({
     supplierCode: { type: String, required: true },
     name: { type: String, required: true },
     openingBalance: { type: Number, default: 0 },
+    currentBalance: { type: Number, default: 0 },
     mobileNumber: { type: String, default: "" },
     gstNumber: { type: String, default: "" },
     address1: { type: String, default: "" },

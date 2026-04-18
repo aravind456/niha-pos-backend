@@ -4,21 +4,37 @@ const Purchase = require('../models/Purchase');
 const Product = require('../models/Product');
 
 // 1. SAVE PURCHASE (Pudhu entry podumbodhu stock egharum)
+// routes/purchases.js
+
 router.post('/save-purchase', async (req, res) => {
     try {
-        const newPurchase = new Purchase(req.body);
+        const { userMobile, supplierId, totalAmount, paymentType, items, billNo, date } = req.body;
+
+        const newPurchase = new Purchase({
+            userMobile,
+            supplierId,
+            totalAmount,
+            paymentType,
+            items,
+            billNo,
+            date
+        });
+
         const savedPurchase = await newPurchase.save();
 
-        // STOCK UPDATE: Purchase panna stock increase aaganum
-        for (let item of req.body.items) {
-            await Product.findOneAndUpdate(
-                { _id: item.id, userMobile: req.body.userMobile },
-                { $inc: { stock: item.qty } } 
+        // ✅ INGA DHAAN ANDHA LOGIC-AI KUDUKKANUM
+        if (paymentType === "Credit") {
+            const Supplier = require('../models/Supplier'); // Model import check pannunga
+            await Supplier.findOneAndUpdate(
+                { _id: supplierId, userMobile: userMobile }, 
+                { $inc: { currentBalance: totalAmount } }
             );
         }
-        res.status(201).json({ success: true, message: "Purchase Saved & Stock Updated!" });
-    } catch (err) {
-        res.status(400).json({ success: false, message: err.message });
+
+        res.status(200).json({ success: true, message: "Purchase saved!", data: savedPurchase });
+
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
     }
 });
 

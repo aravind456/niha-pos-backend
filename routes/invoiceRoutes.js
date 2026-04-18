@@ -37,13 +37,15 @@ try {
 // 1. ஒரு கஸ்டமரின் பில்களை மட்டும் எடுக்க (Ledger-க்காக)
 // =========================================
 // 🟢 PATH: /api/sales/customer-bills/:customerId
+// Purchase history fetch panna indha route-ai use pannunga
 router.get('/customer-bills/:customerId', async (req, res) => {
     try {
-        const bills = await Invoice.find({ 
-            customerId: req.params.customerId, 
-            // Credit bills mattum venum na paymentMode check pannunga
-            $or: [{ paymentMode: "Credit" }, { creditAmount: { $gt: 0 } }]
-        }).sort({ billDate: -1 }); // billDate dhaan unga schema-la irukku
+        // Database-la 'supplierId' nu field irukku (image_18d1ec.png paarunga)
+        // Adhanaala customerId-ai supplierId-ah match pannanum
+        const bills = await Purchase.find({ 
+            supplierId: req.params.customerId, 
+            paymentType: "Credit" // Schema-la paymentType nu dhaan irukku
+        }).sort({ createdAt: -1 }); 
         
         res.json(bills);
     } catch (e) {

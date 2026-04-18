@@ -65,4 +65,19 @@ router.delete('/delete-customer/:id', async (req, res) => {
     } catch (err) { res.status(400).json({ error: "Delete failed" }); }
 });
 
+// GET ONLY CREDIT BILLS FOR A CUSTOMER
+router.get('/customer-bills/:customerId', async (req, res) => {
+    try {
+        // Inga 'Credit' mode-la irukara bills-ai mattum filter panrom
+        const bills = await Invoice.find({ 
+            customerId: req.params.customerId,
+            paymentMode: "Credit" 
+        }).sort({ billDate: -1 });
+        
+        res.status(200).json(bills);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch bills" });
+    }
+});
+
 module.exports = router;

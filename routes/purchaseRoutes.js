@@ -117,7 +117,8 @@ router.get('/supplier-history/:userMobile/:supplierId', async (req, res) => {
         const { userMobile, supplierId } = req.params;
         const history = await Purchase.find({ 
             userMobile: userMobile, 
-            supplierId: supplierId  // Idhai vachi filter panrom
+            supplierId: supplierId,  // Idhai vachi filter panrom
+            paymentType: "Credit"
         }).sort({ createdAt: -1 });
         
         res.json(history);

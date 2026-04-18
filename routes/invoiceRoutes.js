@@ -78,7 +78,7 @@ router.post('/save-bill', async (req, res) => {
         // Customer Ledger Update (If Credit)
         if (req.body.creditAmount > 0 && req.body.customerId) {
             await Customer.findByIdAndUpdate(
-                req.body.customerId, 
+                { _id: req.body.customerId, userMobile: req.body.userMobile }, // Match both
                 { $inc: { currentBalance: req.body.creditAmount } }
             );
             } 

@@ -35,18 +35,21 @@ try {
 
 // ==========================================
 // 1. ஒரு கஸ்டமரின் பில்களை மட்டும் எடுக்க (Ledger-க்காக)
-// ==========================================
+// =========================================
+// 🟢 PATH: /api/sales/customer-bills/:customerId
 router.get('/customer-bills/:customerId', async (req, res) => {
     try {
         const bills = await Invoice.find({ 
-            customerId: req.params.customerId 
-        }).sort({ billDate: -1 });
-        res.status(200).json(bills);
-    } catch (err) {
-        res.status(500).json({ error: "Fetch failed" });
+            customerId: req.params.customerId, 
+            // Credit bills mattum venum na paymentMode check pannunga
+            $or: [{ paymentMode: "Credit" }, { creditAmount: { $gt: 0 } }]
+        }).sort({ billDate: -1 }); // billDate dhaan unga schema-la irukku
+        
+        res.json(bills);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 });
-
 // ==========================================
 // 1. SAVE BILL API
 // ==========================================

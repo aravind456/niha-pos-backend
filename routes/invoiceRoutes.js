@@ -36,23 +36,24 @@ try {
 // ==========================================
 // 1. ஒரு கஸ்டமரின் பில்களை மட்டும் எடுக்க (Ledger-க்காக)
 // =========================================
-// 🟢 PATH: /api/sales/customer-bills/:customerId
+
 // Purchase history fetch panna indha route-ai use pannunga
 router.get('/customer-bills/:customerId', async (req, res) => {
     try {
         const { customerId } = req.params;
-        
-        // 1. Inga model name 'Invoice' ah nu check pannunga (Customer-ku Invoice dhaan varum)
-        // 2. Field name 'customerId' correct-ah nu check pannunga
+
+        // ID valid-ah nu check panni ObjectId-ah maathunga
+        if (!mongoose.Types.ObjectId.isValid(customerId)) {
+            return res.status(400).json({ error: "Invalid Customer ID format" });
+        }
+
         const bills = await Invoice.find({ 
-            customerId: customerId, 
+            customerId: new mongoose.Types.ObjectId(customerId), 
             paymentType: "Credit" 
-        }).sort({ date: -1 }); // 'createdAt' ku badhula 'date' use pannunga
+        }).sort({ date: -1 });
         
-        res.status(200).json(bills);
+        res.json(bills);
     } catch (e) {
-        // Error 500 vara munnadi terminal-la enna error nu print aagum
-        console.log("Error in customer-bills:", e.message); 
         res.status(500).json({ error: e.message });
     }
 });

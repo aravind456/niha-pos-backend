@@ -232,6 +232,19 @@ router.get('/stock-report/:productId', async (req, res) => {
 
         let history = [];
 
+        // 1. Manually add Opening Stock as the first entry
+        if (product.openingStock > 0) {
+            history.push({
+               date: product.createdAt || new Date(2026, 0, 1), // Product create panna date
+               type: 'OPENING',
+                       partyName: 'Initial Stock',
+                       billNo: 'START',
+                       qty: Number(product.openingStock),
+                       runningBalance: Number(product.openingStock),
+                       color: 'blue' // Flutter-la blue color-la kaata
+                   });
+               }
+
         // 4. Process Sales Data
         invoices.forEach(inv => {
             const item = inv.cartItems.find(i => 

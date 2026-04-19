@@ -202,49 +202,78 @@ router.get('/stock-report/:productId', async (req, res) => {
         const { productId } = req.params;
         const { userMobile } = req.query;
 
-        console.log("Fetching report for ID:", productId); // Debugging-க்காக
-        console.log("User Mobile:", userMobile);
+        // முதலில் அந்த ப்ராடக்ட்டின் பெயரை எடுப்போம்
+        const product = await Product.findOne({ _id: productId, userMobile: userMobile });
+        const pName = product ? product.name : null;
 
-        // 1. ID-ஐ ObjectId-ஆக மாற்றுகிறோம் (Cast Error வராமல் தடுக்க)
-        let objId;
-        try {
-            objId = new mongoose.Types.ObjectId(productId);
-        } catch (idErr) {
-            return res.status(400).json({ error: "Invalid Product ID format in URL" });
-        }
+        // Sales History: ID அல்லது Name இரண்டில் ஏதாவது ஒன்று மேட்ச் ஆனாலும் எடுக்கும்படி மாற்றுங்கள்
+        const invoices = await Invoice.find({
+            userMobile: userMobile,
+            $or: [
+                { "cartItems.productId": productId },
+                { "cartItems.name": pName } // பெயர் மூலமும் தேடுதல்
+            ]
+        }).select('billNo billDate cartItems');
 
-        // 2. Purchase History
+        // Purchase History: இங்கும் அதே போல்
         const Purchase = mongoose.model('Purchase');
         const purchases = await Purchase.find({
             userMobile: userMobile,
-            "items.productId": productId // சில சமயம் DB-யில் String-ஆக இருந்தால் இது வேலை செய்யும்
+            $or: [
+                { "items.productId": productId },
+                { "items.name": pName }
+            ]
         }).select('billNo date items');
-
-        // 3. Sales History
-        const invoices = await Invoice.find({
-            userMobile: userMobile,
-            "cartItems.productId": productId 
-        }).select('billNo billDate cartItems');
-
-        // 4. Current Product Details
-        const product = await Product.findOne({ _id: objId, userMobile: userMobile });
 
         let history = [];
 
-        // Purchase Data processing
-        purchases.forEach(p => {
-            // String comparison handle செய்ய .toString() பயன்படுத்துகிறோம்
-            const item = p.items.find(i => i.productId.toString() === productId.toString());
+        // Sales Data processing
+        invoices.forEach(inv => {
+            const item = inv.cartItems.find(i => 
+                (i.productId && i.productId.toString() === productId) || 
+                (i.name === pName)
+            );
             if (item) {
                 history.push({
-                    date: p.date,
+                    date: inv.billDate,
+                    type: 'SALES',
+                    billNo: inv.billNo,
+                    qty: Number(item.quantity) || Number(item.qty) || 0,
+                    color: 'red'
+                });
+            }
+        });
+
+        purchases.forEach(p => {
+            const item = p.items.find(i => 
+                (i.productId && i.productId.toString() === productId) || 
+                (i.name === pName)
+            );
+            if (item) {
+                history.push({
+                    date: p.billDate,
                     type: 'PURCHASE',
                     billNo: p.billNo,
-                    qty: item.quantity || item.qty || 0,
+                    qty: Number(item.quantity) || Number(item.qty) || 0,
                     color: 'green'
                 });
             }
         });
+
+        // Purchase Data processing
+       // purchases.forEach(p => {
+            // String comparison handle செய்ய .toString() பயன்படுத்துகிறோம்
+         //   const item = p.items.find(i => i.productId.toString() === productId.toString());
+       //     if (item) {
+         //       history.push({
+           //         date: p.date,
+             //       type: 'PURCHASE',
+               //     billNo: p.billNo,
+               //     qty: item.quantity || item.qty || 0,
+               //     color: 'green'
+               // });
+          //  }
+       // });
 
         // Sales Data processing
         invoices.forEach(inv => {

@@ -238,6 +238,7 @@ router.get('/stock-report/:productId', async (req, res) => {
                     date: inv.billDate,
                     type: 'SALES',
                     billNo: inv.billNo,
+                    partyName: inv.customerName || "Cash Sale",
                     qty: Number(item.quantity) || Number(item.qty) || 0,
                     color: 'red'
                 });
@@ -251,8 +252,9 @@ router.get('/stock-report/:productId', async (req, res) => {
             );
             if (item) {
                 history.push({
-                    date: p.billDate,
+                    date: p.Date,
                     type: 'PURCHASE',
+                    partyName: p.supplierName || "Supplier",
                     billNo: p.billNo,
                     qty: Number(item.quantity) || Number(item.qty) || 0,
                     color: 'green'

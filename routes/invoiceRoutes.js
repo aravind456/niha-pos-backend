@@ -288,17 +288,15 @@ router.get('/stock-report/:productId', async (req, res) => {
         // Step A: Modhalla pazhaya date-la irundhu sort pannanum (Ascending)
         history.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        let currentBal = 0;
-        
-        // Step B: Ovvoru row-kum balance calculate pannanum
+       let currentBal = 0; // Modhalla 0-la start pannanum
         history = history.map(item => {
-            if (item.type === 'PURCHASE') {
-                currentBal += item.qty; // Vaangunaal stock yerum
-            } else {
-                currentBal -= item.qty; // Vitthaal stock kuraiyum
-            }
-            return { ...item, runningBalance: currentBal }; // Ippo 'runningBalance' add aagidum
-        });
+          if (item.type === 'OPENING' || item.type === 'PURCHASE') {
+           currentBal += item.qty;
+          } else if (item.type === 'SALES') {
+           currentBal -= item.qty;
+          }
+          return { ...item, runningBalance: currentBal };
+      });
 
         // 6. Sort by Date (Latest First)
         history.sort((a, b) => new Date(b.date) - new Date(a.date));

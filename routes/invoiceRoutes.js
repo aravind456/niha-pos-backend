@@ -228,7 +228,9 @@ router.get('/stock-report/:productId', async (req, res) => {
                 { "items.id": productId },
                 { "items.name": pName }
             ]
-        }).select('billNo date supplierName items');
+        })
+        .populate('supplierId', 'name')
+        .select('billNo date supplierName items');
 
         let history = [];
 
@@ -268,6 +270,8 @@ if (opStock > 0) {
 
         // 5. Process Purchase Data
         purchases.forEach(p => {
+            const sName = (p.supplierId && p.supplierId.name) ? p.supplierId.name : "Unknown Supplier";
+            
             const item = p.items.find(i => 
                 (i.productId && i.productId.toString() === productId) || 
                 (i.id && i.id.toString() === productId) ||

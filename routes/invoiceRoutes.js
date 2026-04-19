@@ -130,10 +130,16 @@ router.get('/today-sales/:mobile', async (req, res) => {
         const end = new Date();
         end.setHours(23, 59, 59, 999); 
 
-       const invoices = await Invoice.find({
-    userMobile: userMobile,
-    "cartItems.productId": productId // 🟢 Flutter-லிருந்து அனுப்பும் போது 'productId' என்ற பெயரில் அனுப்புகிறீர்களா என உறுதி செய்யவும்
-}).select('billNo billDate cartItems');
+        // Query-ai ippadi maathunga:
+        const invoices = await Invoice.find({
+            userMobile: mobile, // Mela params-la irundhu edutha 'mobile' variable
+            billDate: { $gte: start, $lte: end } // Innaikku date-la irukkira bill-ai matum edukka
+        });
+
+       //const invoices = await Invoice.find({
+       //userMobile: userMobile,
+       //"cartItems.productId": productId // 🟢 Flutter-லிருந்து அனுப்பும் போது 'productId' என்ற பெயரில் அனுப்புகிறீர்களா என உறுதி செய்யவும்
+       //}).select('billNo billDate cartItems');
 
         let total = 0, cash = 0, upi = 0, credit = 0;
 
@@ -166,6 +172,7 @@ router.get('/today-sales/:mobile', async (req, res) => {
         });
 
     } catch (e) {
+        console.error("Dashboard Sales Error:", e);
         res.status(500).json({ error: "Server error occurred" });
     }
 });

@@ -60,34 +60,34 @@ router.post('/save-bill', async (req, res) => {
 
         const savedInvoice = await newInvoice.save();
 
-        // 🔥 1. STOCK UPDATE (DECREASE) - Safe Logic
-        // 🔥 1. STOCK UPDATE (DECREASE) - UPDATED LOGIC
-if (items && items.length > 0) {
-    const bulkOps = items.map(item => {
-        // 🔴 PROBLEM: Inga thaan Number(item.quantity) NaN-ah maarudhu
-        // FIX: 'quantity' illa 'qty' rendu key-aiyum check panni, illa na 0 vaikkarom
-        const q = Number(item.quantity) || Number(item.qty) || 0;
+        // 🔥 STOCK UPDATE (DECREASE) - STRONG FIX
+        if (items && items.length > 0) {
+            const bulkOps = items.map(item => {
+                // 🟢 Inga thaan mukkiamana fix: 
+                // item.quantity (illa na) item.qty - rendu key-aiyum check panrom.
+                // Number() panna mudiyala na 0 eduthukum.
+                const rawQty = item.quantity !== undefined ? item.quantity : item.qty;
+                const q = Number(rawQty) || 0;
 
-        return {
-            updateOne: {
-                filter: { 
-                    _id: item.productId, 
-                    userMobile: userMobile 
-                },
-                // q-vai direct-ah use pannunga, Number conversion mela panniyachu
-                update: { $inc: { stock: -Math.abs(q) } } 
-            }
-        };
-    });
+                return {
+                    updateOne: {
+                        filter: { 
+                            _id: item.productId, 
+                            userMobile: userMobile 
+                        },
+                        // q absolute value-ah maathi minus panrom
+                        update: { $inc: { stock: -Math.abs(q) } } 
+                    }
+                };
+            });
 
-    // Inga logic check panna oru console log:
-    console.log("Bulk Ops for Stock:", JSON.stringify(bulkOps));
+            // Log panni check panna (Render logs-la theriyum)
+            console.log("Stock Update Payload:", JSON.stringify(bulkOps));
+            
+            await Product.bulkWrite(bulkOps);
+        }
 
-    await Product.bulkWrite(bulkOps);
-}
-
-        // 2. CUSTOMER LEDGER UPDATE - null check added
-        // customerId 'null' (string) ah vandhaalum handle pannum
+        // 2. CUSTOMER LEDGER UPDATE
         if (creditAmount > 0 && customerId && customerId !== "null") {
             await Customer.findOneAndUpdate(
                 { _id: customerId, userMobile: userMobile },
@@ -103,6 +103,7 @@ if (items && items.length > 0) {
 
     } catch (err) {
         console.error("Save Bill Error:", err);
+        // Error message-la path-aiyum serthu anupunga, appo dhaan trace panna easy
         res.status(500).json({ success: false, message: "Server Error: " + err.message });
     }
 });

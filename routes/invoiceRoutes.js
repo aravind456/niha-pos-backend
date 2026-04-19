@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const Product = require('../models/Product');
 
 // 1. Schema Definition
 const invoiceSchema = new mongoose.Schema({
@@ -170,6 +171,8 @@ router.get('/report/sales', async (req, res) => {
 // ==========================================
 // STOCK HISTORY & CLOSING STOCK REPORT
 // ==========================================
+
+
 router.get('/stock-report/:productId', async (req, res) => {
     try {
         const { productId } = req.params;

@@ -166,6 +166,71 @@ router.get('/report/sales', async (req, res) => {
     }
 });
 
+
+// ==========================================
+// STOCK HISTORY & CLOSING STOCK REPORT
+// ==========================================
+router.get('/stock-report/:productId', async (req, res) => {
+    try {
+        const { productId } = req.params;
+        const { userMobile } = req.query;
+
+        // 1. Purchase History (Stock Add-aanadha edukkum)
+        const Purchase = mongoose.model('Purchase');
+        const purchases = await Purchase.find({
+            userMobile: userMobile,
+            "items.productId": productId
+        }).select('billNo date items totalAmount');
+
+        // 2. Sales History (Stock Minus-aanadha edukkum)
+        const invoices = await Invoice.find({
+            userMobile: userMobile,
+            "cartItems.productId": productId
+        }).select('billNo billDate cartItems');
+
+        // 3. Current Product Details (Closing Stock-kaga)
+        const product = await Product.findOne({ _id: productId, userMobile: userMobile });
+
+        let history = [];
+
+        // Purchase Data-vai History-la sethu 'Type' Purchase-nu vaikkarom
+        purchases.forEach(p => {
+            const item = p.items.find(i => i.productId.toString() === productId);
+            history.push({
+                date: p.date,
+                type: 'PURCHASE',
+                billNo: p.billNo,
+                qty: item ? item.quantity : 0,
+                color: 'green'
+            });
+        });
+
+        // Sales Data-vai History-la sethu 'Type' Sales-nu vaikkarom
+        invoices.forEach(inv => {
+            const item = inv.cartItems.find(i => i.productId.toString() === productId);
+            history.push({
+                date: inv.billDate,
+                type: 'SALES',
+                billNo: inv.billNo,
+                qty: item ? item.quantity : 0,
+                color: 'red'
+            });
+        });
+
+        // Date wise sort pannuvom (Latest first)
+        history.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        res.json({
+            productName: product ? product.name : "Unknown",
+            currentStock: product ? product.stock : 0,
+            history: history
+        });
+
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // இது கண்டிப்பாக இருக்க வேண்டும்
 router.delete('/:id', async (req, res) => {
     try {

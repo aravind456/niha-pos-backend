@@ -52,7 +52,7 @@ router.post('/save-bill', async (req, res) => {
 const lastInvoice = await Invoice.findOne({ userMobile }).sort({ _id: -1 }); // Latest bill-ai edukka _id use pannunga
 let nextBillNo = "1";
 if (lastInvoice && lastInvoice.billNo) {
-    nextBillNo = (Number(lastInvoice.billNo) + 1).toString();
+    nextBillNo = (parseInt(lastInvoice.billNo) + 1).toString();
 }
 
         const newInvoice = new Invoice({
@@ -60,7 +60,7 @@ if (lastInvoice && lastInvoice.billNo) {
             billNo: nextBillNo,
             customerName: req.body.customerName || "Cash",
             cartItems: items, 
-            billDate: req.body.createdAt || Date.now()
+            billDate: req.body.date || req.body.createdAt || Date.now()
         });
 
         const savedInvoice = await newInvoice.save();

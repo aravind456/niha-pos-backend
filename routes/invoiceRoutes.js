@@ -48,8 +48,12 @@ router.post('/save-bill', async (req, res) => {
         }
 
         // Bill Number Generation
-        const lastInvoice = await Invoice.findOne({ userMobile }).sort({ billNo: -1 });
-        let nextBillNo = lastInvoice && lastInvoice.billNo ? (parseInt(lastInvoice.billNo) + 1).toString() : "1";
+        // Bill Number logic-ai ippadi maathunga
+const lastInvoice = await Invoice.findOne({ userMobile }).sort({ _id: -1 }); // Latest bill-ai edukka _id use pannunga
+let nextBillNo = "1";
+if (lastInvoice && lastInvoice.billNo) {
+    nextBillNo = (Number(lastInvoice.billNo) + 1).toString();
+}
 
         const newInvoice = new Invoice({
             ...req.body,

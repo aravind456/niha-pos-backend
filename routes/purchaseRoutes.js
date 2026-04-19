@@ -17,18 +17,20 @@ router.post('/save-purchase', async (req, res) => {
         const savedPurchase = await newPurchase.save();
 
         // 🔥 1. STOCK UPDATE (INCREASE)
-        if (items && items.length > 0) {
+        // 🔥 STOCK UPDATE (DECREASE) - FIX
+           if (items && items.length > 0) {
             const bulkOps = items.map(item => ({
-                updateOne: {
-                    filter: { 
-                        _id: item.productId, // Flutter-la 'productId' nu anupunga
-                        userMobile: userMobile 
-                    },
-                    update: { $inc: { stock: Number(item.quantity) } } // Stock koodum
-                }
-            }));
-            await Product.bulkWrite(bulkOps);
+              updateOne: {
+               filter: { 
+                _id: item.productId, 
+                userMobile: userMobile 
+            },
+            // Number(item.quantity) NaN-ah irundha 0-nu eduthukkum
+            update: { $inc: { stock: Number(item.quantity) || 0 } }
         }
+    }));
+    await Product.bulkWrite(bulkOps);
+}
 
         // 2. SUPPLIER LEDGER UPDATE
         if (paymentType === "Credit" && supplierId) {

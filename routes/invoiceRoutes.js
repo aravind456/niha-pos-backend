@@ -75,17 +75,18 @@ router.post('/save-bill', async (req, res) => {
                     updateOne: {
                         filter: { 
                             _id: pId,
-                            userMobile: userMobile 
+                            userMobile: String(userMobile) 
                         },
                         // q absolute value-ah maathi minus panrom
                         update: { $inc: { stock: -Math.abs(q) } } 
                     }
                 };
             });
+               // Indha console log-ai Render Dashboard-la check pannunga
+                console.log("Stock Update Attempt for:", JSON.stringify(bulkOps, null, 2));
 
-            console.log("Final BulkOps:", JSON.stringify(bulkOps, null, 2));
-            
-            await Product.bulkWrite(bulkOps);
+                const result = await Product.bulkWrite(bulkOps);
+                console.log("BulkWrite Result:", result); // modifiedCount: 1 nu vara num
         }
 
         // 2. CUSTOMER LEDGER UPDATE

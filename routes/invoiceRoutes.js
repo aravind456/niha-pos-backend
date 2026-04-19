@@ -130,10 +130,10 @@ router.get('/today-sales/:mobile', async (req, res) => {
         const end = new Date();
         end.setHours(23, 59, 59, 999); 
 
-        const invoices = await Invoice.find({
-            userMobile: mobile,
-            billDate: { $gte: start, $lte: end }
-        });
+       const invoices = await Invoice.find({
+    userMobile: userMobile,
+    "cartItems.productId": productId // 🟢 Flutter-லிருந்து அனுப்பும் போது 'productId' என்ற பெயரில் அனுப்புகிறீர்களா என உறுதி செய்யவும்
+}).select('billNo billDate cartItems');
 
         let total = 0, cash = 0, upi = 0, credit = 0;
 

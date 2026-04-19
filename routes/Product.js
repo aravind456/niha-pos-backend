@@ -83,6 +83,43 @@ router.post('/add-purchase', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+// PURCHASE ENTRY ROUTE - Cart items-ku support pannum maari fix
+router.post('/save-purchase', async (req, res) => {
+    try {
+        const { userMobile, items } = req.body; // Flutter-la irundhu 'items' List varum
+
+        if (!items || items.length === 0) {
+            return res.status(400).json({ success: false, message: "No items found" });
+        }
+
+        const bulkOps = items.map(item => {
+            // Flutter-la irundhu 'productId' nu anupunga
+            const pId = item.productId || item._id || item.id;
+            const q = Number(item.quantity) || Number(item.qty) || 0;
+
+            return {
+                updateOne: {
+                    filter: { _id: pId, userMobile: String(userMobile) },
+                    // Purchase panna stock PLUS (+) aaganum
+                    update: { $inc: { stock: Math.abs(q) } } 
+                }
+            };
+        });
+
+        const result = await Product.bulkWrite(bulkOps);
+
+        res.status(200).json({ 
+            success: true,
+            message: "Purchase Saved & Stock Added!", 
+            modifiedCount: result.modifiedCount 
+        });
+
+    } catch (err) {
+        console.error("Purchase Error:", err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
 // MUKKIYAM: Ithai marakkama kadaisiyila podunga
 module.exports = router;
 

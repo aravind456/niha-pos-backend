@@ -40,13 +40,14 @@ try {
 
 router.post('/save-bill', async (req, res) => {
     try {
+        // 1. Body-la irundhu data-vai edukkom
         const { userMobile, items, creditAmount, customerId } = req.body;
 
         if (!userMobile) {
             return res.status(400).json({ success: false, message: "userMobile is required!" });
         }
 
-        // Bill Number Auto-Generation
+        // Bill Number Generation
         const lastInvoice = await Invoice.findOne({ userMobile }).sort({ billNo: -1 });
         let nextBillNo = lastInvoice && lastInvoice.billNo ? (parseInt(lastInvoice.billNo) + 1).toString() : "1";
 
@@ -60,34 +61,39 @@ router.post('/save-bill', async (req, res) => {
 
         const savedInvoice = await newInvoice.save();
 
-        // 🔥 STOCK UPDATE (DECREASE) - STRONG FIX
+        // 🔥 STOCK UPDATE (DECREASE) - FIX START
         if (items && items.length > 0) {
             const bulkOps = items.map(item => {
-                // 🟢 Inga thaan mukkiamana fix: 
-                // item.quantity (illa na) item.qty - rendu key-aiyum check panrom.
-                // Number() panna mudiyala na 0 eduthukum.
+                // Flutter-la irundhu 'quantity' nu varutha illa 'qty' nu varutha nu check pannunga
                 const q = Number(item.quantity) || Number(item.qty) || 0;
 
-                // Product ID-ai katchidhama edukkavum
-                const pId = item.productId || item._id;
+                // 🔴 MUKKIAM: Flutter-la irundhu productId nu anupunga
+                // Oru vela item._id-nu anupunaal adhaium edukkum
+                const pId = item.productId || item._id || item.id;
+
+                if (!pId) {
+                    console.log("Error: Product ID missing for item:", item.name);
+                }
 
                 return {
                     updateOne: {
                         filter: { 
-                            _id: pId,
-                            userMobile: String(userMobile) 
+                            _id: pId, // Database Product ID match aaganum
+                            userMobile: String(userMobile) // Database-la "1" match aaganum
                         },
-                        // q absolute value-ah maathi minus panrom
+                        // Inga dhaan stock-ai minus panrom
                         update: { $inc: { stock: -Math.abs(q) } } 
                     }
                 };
             });
-               // Indha console log-ai Render Dashboard-la check pannunga
-                console.log("Stock Update Attempt for:", JSON.stringify(bulkOps, null, 2));
 
-                const result = await Product.bulkWrite(bulkOps);
-                console.log("BulkWrite Result:", result); // modifiedCount: 1 nu vara num
+            // Log check panna (Render logs-la theriyum)
+            console.log("Final Stock Update Ops:", JSON.stringify(bulkOps, null, 2));
+
+            const result = await Product.bulkWrite(bulkOps);
+            console.log("BulkWrite Result:", result); 
         }
+        // 🔥 STOCK UPDATE - FIX END
 
         // 2. CUSTOMER LEDGER UPDATE
         if (creditAmount > 0 && customerId && customerId !== "null") {
@@ -105,7 +111,6 @@ router.post('/save-bill', async (req, res) => {
 
     } catch (err) {
         console.error("Save Bill Error:", err);
-        // Error message-la path-aiyum serthu anupunga, appo dhaan trace panna easy
         res.status(500).json({ success: false, message: "Server Error: " + err.message });
     }
 });

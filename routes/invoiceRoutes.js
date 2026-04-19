@@ -60,25 +60,32 @@ router.post('/save-bill', async (req, res) => {
 
         const savedInvoice = await newInvoice.save();
 
-        // 🔥 1. STOCK UPDATE (DECREASE)
+        // 🔥 1. STOCK UPDATE (DECREASE) - Safe Logic
         if (items && items.length > 0) {
-            const bulkOps = items.map(item => ({
-                updateOne: {
-                    filter: { 
-                        _id: item.productId, 
-                        userMobile: userMobile 
-                    },
-                    update: { $inc: { stock: -Math.abs(Number(item.quantity)) } } // Kandippa minus aagum
-                }
-            }));
+            const bulkOps = items.map(item => {
+                // 🟢 Inga thaan fix: quantity illa qty rendu field-aiyum check panrom
+                const q = Number(item.quantity) || Number(item.qty) || 0;
+                
+                return {
+                    updateOne: {
+                        filter: { 
+                            _id: item.productId, 
+                            userMobile: userMobile 
+                        },
+                        // Number NaN-ah irundhaalum 0-nu eduthukum, crash aagadhu
+                        update: { $inc: { stock: -Math.abs(q) } } 
+                    }
+                };
+            });
             await Product.bulkWrite(bulkOps);
         }
 
-        // 2. CUSTOMER LEDGER UPDATE
-        if (creditAmount > 0 && customerId) {
+        // 2. CUSTOMER LEDGER UPDATE - null check added
+        // customerId 'null' (string) ah vandhaalum handle pannum
+        if (creditAmount > 0 && customerId && customerId !== "null") {
             await Customer.findOneAndUpdate(
                 { _id: customerId, userMobile: userMobile },
-                { $inc: { currentBalance: creditAmount } }
+                { $inc: { currentBalance: Number(creditAmount) || 0 } }
             );
         }
 

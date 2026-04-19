@@ -66,13 +66,15 @@ router.post('/save-bill', async (req, res) => {
                 // 🟢 Inga thaan mukkiamana fix: 
                 // item.quantity (illa na) item.qty - rendu key-aiyum check panrom.
                 // Number() panna mudiyala na 0 eduthukum.
-                const rawQty = item.quantity !== undefined ? item.quantity : item.qty;
-                const q = Number(rawQty) || 0;
+                const q = Number(item.quantity) || Number(item.qty) || 0;
+
+                // Product ID-ai katchidhama edukkavum
+                const pId = item.productId || item._id;
 
                 return {
                     updateOne: {
                         filter: { 
-                            _id: item.productId, 
+                            _id: pId,
                             userMobile: userMobile 
                         },
                         // q absolute value-ah maathi minus panrom
@@ -81,8 +83,7 @@ router.post('/save-bill', async (req, res) => {
                 };
             });
 
-            // Log panni check panna (Render logs-la theriyum)
-            console.log("Stock Update Payload:", JSON.stringify(bulkOps));
+            console.log("Final BulkOps:", JSON.stringify(bulkOps, null, 2));
             
             await Product.bulkWrite(bulkOps);
         }

@@ -232,18 +232,20 @@ router.get('/stock-report/:productId', async (req, res) => {
 
         let history = [];
 
-        // 1. Manually add Opening Stock as the first entry
-        if (product.openingStock > 0) {
-            history.push({
-               date: product.createdAt || new Date(2026, 0, 1), // Product create panna date
-               type: 'OPENING',
-               partyName: 'Opening Stock Balance',
-               billNo: 'START',
-               qty: Number(product.openingStock),
-               runningBalance: Number(product.openingStock),
-               color: 'blue' // Flutter-la blue color-la kaata
-            });
-        }
+        const opStock = Number(product.openingStock) || Number(product.opening_stock) || 0;
+
+// 2. MUKKIYAM: Inga 'opStock' variable-ai thaan check pannanum
+if (opStock > 0) {
+    history.push({
+        date: product.createdAt || new Date(2026, 0, 1), 
+        type: 'OPENING',
+        partyName: 'INITIAL OPENING STOCK',
+        billNo: 'START',
+        qty: opStock, // Variable-ai use pannunga
+        runningBalance: opStock,
+        color: 'blue'
+    });
+}
 
         // 4. Process Sales Data
         invoices.forEach(inv => {

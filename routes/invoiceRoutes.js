@@ -271,7 +271,7 @@ if (opStock > 0) {
         // 5. Process Purchase Data
         purchases.forEach(p => {
             const sName = (p.supplierId && p.supplierId.name) ? p.supplierId.name : "Unknown Supplier";
-            
+
             const item = p.items.find(i => 
                 (i.productId && i.productId.toString() === productId) || 
                 (i.id && i.id.toString() === productId) ||
@@ -282,7 +282,7 @@ if (opStock > 0) {
                     date: p.date || p.Date, // Check capital 'D' in your schema
                     type: 'PURCHASE',
                     billNo: p.billNo,
-                    partyName: p.supplierName || "Supplier",
+                    partyName: sName,
                     qty: Number(item.quantity) || Number(item.qty) || 0,
                     color: 'green'
                 });

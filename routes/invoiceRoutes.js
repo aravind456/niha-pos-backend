@@ -39,49 +39,45 @@ try {
 
 router.post('/save-bill', async (req, res) => {
     try {
-        if (!req.body.userMobile) {
+        const { userMobile, items, creditAmount, customerId } = req.body;
+
+        if (!userMobile) {
             return res.status(400).json({ success: false, message: "userMobile is required!" });
         }
 
-        // Bill Number Logic
-        const lastInvoice = await Invoice.findOne({ userMobile: req.body.userMobile }).sort({ billNo: -1 });
-        let nextBillNo = "1"; 
-        if (lastInvoice && lastInvoice.billNo) {
-            nextBillNo = (parseInt(lastInvoice.billNo) + 1).toString();
-        }
+        // Bill Number Auto-Generation
+        const lastInvoice = await Invoice.findOne({ userMobile }).sort({ billNo: -1 });
+        let nextBillNo = lastInvoice && lastInvoice.billNo ? (parseInt(lastInvoice.billNo) + 1).toString() : "1";
 
         const newInvoice = new Invoice({
             ...req.body,
             billNo: nextBillNo,
             customerName: req.body.customerName || "Cash",
-            customerMobile: req.body.customerMobile || "",
-            salesmanName: req.body.salesmanName || "Self",
-            cartItems: req.body.items, // Flutter-la 'items' nu anupuveenga
+            cartItems: items, 
             billDate: req.body.createdAt || Date.now()
         });
 
-        // 🟢 Step 1: Save the Invoice
         const savedInvoice = await newInvoice.save();
 
-        // 🟢 Step 2: Stock Auto-Minus Logic
-        if (req.body.items && req.body.items.length > 0) {
-            const bulkOps = req.body.items.map(item => ({
+        // 🔥 1. STOCK UPDATE (DECREASE)
+        if (items && items.length > 0) {
+            const bulkOps = items.map(item => ({
                 updateOne: {
                     filter: { 
-                        _id: item.productId, // Flutter-la 'productId' nu send pannanum
-                        userMobile: req.body.userMobile 
+                        _id: item.productId, 
+                        userMobile: userMobile 
                     },
-                    update: { $inc: { stock: -item.quantity } } // Stock-ai kuraikkum logic
+                    update: { $inc: { stock: -Math.abs(Number(item.quantity)) } } // Kandippa minus aagum
                 }
             }));
             await Product.bulkWrite(bulkOps);
         }
 
-        // 🟢 Step 3: Customer Ledger Update (If Credit)
-        if (req.body.creditAmount > 0 && req.body.customerId) {
+        // 2. CUSTOMER LEDGER UPDATE
+        if (creditAmount > 0 && customerId) {
             await Customer.findOneAndUpdate(
-                { _id: req.body.customerId, userMobile: req.body.userMobile },
-                { $inc: { currentBalance: req.body.creditAmount } }
+                { _id: customerId, userMobile: userMobile },
+                { $inc: { currentBalance: creditAmount } }
             );
         }
 
@@ -93,7 +89,7 @@ router.post('/save-bill', async (req, res) => {
 
     } catch (err) {
         console.error("Save Bill Error:", err);
-        res.status(500).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: "Server Error: " + err.message });
     }
 });
 

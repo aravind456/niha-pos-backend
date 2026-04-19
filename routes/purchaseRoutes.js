@@ -11,29 +11,38 @@ router.post('/save-purchase', async (req, res) => {
         const { userMobile, supplierId, totalAmount, paymentType, items, billNo, date } = req.body;
 
         const newPurchase = new Purchase({
-            userMobile,
-            supplierId,
-            totalAmount,
-            paymentType,
-            items,
-            billNo,
-            date
+            userMobile, supplierId, totalAmount, paymentType, items, billNo, date
         });
 
         const savedPurchase = await newPurchase.save();
 
-        // ✅ INGA DHAAN ANDHA LOGIC-AI KUDUKKANUM
-        if (paymentType === "Credit") {
-            const Supplier = require('../models/Supplier'); // Model import check pannunga
+        // 🔥 1. STOCK UPDATE (INCREASE)
+        if (items && items.length > 0) {
+            const bulkOps = items.map(item => ({
+                updateOne: {
+                    filter: { 
+                        _id: item.productId, // Flutter-la 'productId' nu anupunga
+                        userMobile: userMobile 
+                    },
+                    update: { $inc: { stock: Number(item.quantity) } } // Stock koodum
+                }
+            }));
+            await Product.bulkWrite(bulkOps);
+        }
+
+        // 2. SUPPLIER LEDGER UPDATE
+        if (paymentType === "Credit" && supplierId) {
+            const Supplier = require('../models/Supplier');
             await Supplier.findOneAndUpdate(
                 { _id: supplierId, userMobile: userMobile }, 
                 { $inc: { currentBalance: totalAmount } }
             );
         }
 
-        res.status(200).json({ success: true, message: "Purchase saved!", data: savedPurchase });
+        res.status(200).json({ success: true, message: "Purchase & Stock Updated!", data: savedPurchase });
 
     } catch (e) {
+        console.error("Purchase Error:", e);
         res.status(500).json({ success: false, error: e.message });
     }
 });

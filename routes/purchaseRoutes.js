@@ -17,16 +17,25 @@ router.post('/save-purchase', async (req, res) => {
         const savedPurchase = await newPurchase.save();
 
        if (items && items.length > 0) {
-            const bulkOps = items.map(item => ({
-                updateOne: {
-                    filter: { 
-                        _id: item.productId || item._id, // Flutter-la irundhu vara ID
-                        userMobile: String(userMobile) 
-                    },
-                    // (+) PLUS panna Minus symbol-ai yeduthudun-ga
-                    update: { $inc: { stock: Math.abs(Number(item.quantity) || Number(item.qty) || 0) } }
+    const bulkOps = items.map(item => {
+        // Log panni paarunga ID varudha-nu
+        console.log("Updating Product ID:", item.productId); 
+        
+        return {
+            updateOne: {
+                filter: { 
+                    _id: item.productId, // Inga Flutter-la irundhu 'productId' katchidhama varanum
+                    userMobile: String(userMobile) 
+                },
+                // quantity or qty - ethu vandhalum handle panna:
+                update: { 
+                    $inc: { 
+                        stock: Math.abs(Number(item.qty) || Number(item.quantity) || 0) 
+                    } 
                 }
-            }));
+            }
+        };
+    });
     await Product.bulkWrite(bulkOps);
     }
 

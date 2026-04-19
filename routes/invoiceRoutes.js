@@ -202,35 +202,41 @@ router.get('/stock-report/:productId', async (req, res) => {
         const { productId } = req.params;
         const { userMobile } = req.query;
 
-        // முதலில் அந்த ப்ராடக்ட்டின் பெயரை எடுப்போம்
+        // 1. Get Product Details
         const product = await Product.findOne({ _id: productId, userMobile: userMobile });
-        const pName = product ? product.name : null;
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+        const pName = product.name;
 
-        // Sales History: ID அல்லது Name இரண்டில் ஏதாவது ஒன்று மேட்ச் ஆனாலும் எடுக்கும்படி மாற்றுங்கள்
+        // 2. Fetch Sales (Invoices)
         const invoices = await Invoice.find({
             userMobile: userMobile,
             $or: [
                 { "cartItems.productId": productId },
-                { "cartItems.name": pName } // பெயர் மூலமும் தேடுதல்
+                { "cartItems.id": productId }, // Flutter-la irundhu id-nu vara vaippu iruku
+                { "cartItems.name": pName }
             ]
-        }).select('billNo billDate cartItems');
+        }).select('billNo billDate customerName cartItems');
 
-        // Purchase History: இங்கும் அதே போல்
+        // 3. Fetch Purchases
         const Purchase = mongoose.model('Purchase');
         const purchases = await Purchase.find({
             userMobile: userMobile,
             $or: [
                 { "items.productId": productId },
+                { "items.id": productId },
                 { "items.name": pName }
             ]
-        }).select('billNo date items');
+        }).select('billNo date supplierName items');
 
         let history = [];
 
-        // Sales Data processing
+        // 4. Process Sales Data
         invoices.forEach(inv => {
             const item = inv.cartItems.find(i => 
                 (i.productId && i.productId.toString() === productId) || 
+                (i.id && i.id.toString() === productId) ||
                 (i.name === pName)
             );
             if (item) {
@@ -245,58 +251,31 @@ router.get('/stock-report/:productId', async (req, res) => {
             }
         });
 
+        // 5. Process Purchase Data
         purchases.forEach(p => {
             const item = p.items.find(i => 
                 (i.productId && i.productId.toString() === productId) || 
+                (i.id && i.id.toString() === productId) ||
                 (i.name === pName)
             );
             if (item) {
                 history.push({
-                    date: p.Date,
+                    date: p.date || p.Date, // Check capital 'D' in your schema
                     type: 'PURCHASE',
-                    partyName: p.supplierName || "Supplier",
                     billNo: p.billNo,
+                    partyName: p.supplierName || "Supplier",
                     qty: Number(item.quantity) || Number(item.qty) || 0,
                     color: 'green'
                 });
             }
         });
 
-        // Purchase Data processing
-       // purchases.forEach(p => {
-            // String comparison handle செய்ய .toString() பயன்படுத்துகிறோம்
-         //   const item = p.items.find(i => i.productId.toString() === productId.toString());
-       //     if (item) {
-         //       history.push({
-           //         date: p.date,
-             //       type: 'PURCHASE',
-               //     billNo: p.billNo,
-               //     qty: item.quantity || item.qty || 0,
-               //     color: 'green'
-               // });
-          //  }
-       // });
-
-        // Sales Data processing
-        invoices.forEach(inv => {
-            const item = inv.cartItems.find(i => (i.productId || i._id).toString() === productId.toString());
-            if (item) {
-                history.push({
-                    date: inv.billDate,
-                    type: 'SALES',
-                    billNo: inv.billNo,
-                    qty: item.quantity || item.qty || 0,
-                    color: 'red'
-                });
-            }
-        });
-
-        // Date sorting
+        // 6. Sort by Date (Latest First)
         history.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         res.json({
-            productName: product ? product.name : "Unknown",
-            currentStock: product ? product.stock : 0,
+            productName: pName,
+            currentStock: product.stock,
             history: history
         });
 

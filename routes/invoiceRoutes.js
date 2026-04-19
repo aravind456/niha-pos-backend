@@ -278,7 +278,7 @@ if (opStock > 0) {
                     date: p.date || p.Date, // Check capital 'D' in your schema
                     type: 'PURCHASE',
                     billNo: p.billNo,
-                    partyName: sName,
+                    partyName: p.supplierName || "Supplier",
                     qty: Number(item.quantity) || Number(item.qty) || 0,
                     color: 'green'
                 });

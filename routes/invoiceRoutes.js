@@ -237,13 +237,13 @@ router.get('/stock-report/:productId', async (req, res) => {
             history.push({
                date: product.createdAt || new Date(2026, 0, 1), // Product create panna date
                type: 'OPENING',
-                       partyName: 'Initial Stock',
-                       billNo: 'START',
-                       qty: Number(product.openingStock),
-                       runningBalance: Number(product.openingStock),
-                       color: 'blue' // Flutter-la blue color-la kaata
-                   });
-               }
+               partyName: 'Opening Stock Balance',
+               billNo: 'START',
+               qty: Number(product.openingStock),
+               runningBalance: Number(product.openingStock),
+               color: 'blue' // Flutter-la blue color-la kaata
+            });
+        }
 
         // 4. Process Sales Data
         invoices.forEach(inv => {

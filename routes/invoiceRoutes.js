@@ -197,55 +197,70 @@ router.get('/report/sales', async (req, res) => {
 // STOCK HISTORY & CLOSING STOCK REPORT
 // ==========================================
 
-
 router.get('/stock-report/:productId', async (req, res) => {
     try {
         const { productId } = req.params;
         const { userMobile } = req.query;
 
-        // 1. Purchase History (Stock Add-aanadha edukkum)
+        console.log("Fetching report for ID:", productId); // Debugging-க்காக
+        console.log("User Mobile:", userMobile);
+
+        // 1. ID-ஐ ObjectId-ஆக மாற்றுகிறோம் (Cast Error வராமல் தடுக்க)
+        let objId;
+        try {
+            objId = new mongoose.Types.ObjectId(productId);
+        } catch (idErr) {
+            return res.status(400).json({ error: "Invalid Product ID format in URL" });
+        }
+
+        // 2. Purchase History
         const Purchase = mongoose.model('Purchase');
         const purchases = await Purchase.find({
             userMobile: userMobile,
-            "items.productId": productId
-        }).select('billNo date items totalAmount');
+            "items.productId": productId // சில சமயம் DB-யில் String-ஆக இருந்தால் இது வேலை செய்யும்
+        }).select('billNo date items');
 
-        // 2. Sales History (Stock Minus-aanadha edukkum)
+        // 3. Sales History
         const invoices = await Invoice.find({
             userMobile: userMobile,
-            "cartItems.productId": productId
+            "cartItems.productId": productId 
         }).select('billNo billDate cartItems');
 
-        // 3. Current Product Details (Closing Stock-kaga)
-        const product = await Product.findOne({ _id: productId, userMobile: userMobile });
+        // 4. Current Product Details
+        const product = await Product.findOne({ _id: objId, userMobile: userMobile });
 
         let history = [];
 
-        // Purchase Data-vai History-la sethu 'Type' Purchase-nu vaikkarom
+        // Purchase Data processing
         purchases.forEach(p => {
-            const item = p.items.find(i => i.productId.toString() === productId);
-            history.push({
-                date: p.date,
-                type: 'PURCHASE',
-                billNo: p.billNo,
-                qty: item ? item.quantity : 0,
-                color: 'green'
-            });
+            // String comparison handle செய்ய .toString() பயன்படுத்துகிறோம்
+            const item = p.items.find(i => i.productId.toString() === productId.toString());
+            if (item) {
+                history.push({
+                    date: p.date,
+                    type: 'PURCHASE',
+                    billNo: p.billNo,
+                    qty: item.quantity || item.qty || 0,
+                    color: 'green'
+                });
+            }
         });
 
-        // Sales Data-vai History-la sethu 'Type' Sales-nu vaikkarom
+        // Sales Data processing
         invoices.forEach(inv => {
-            const item = inv.cartItems.find(i => i.productId.toString() === productId);
-            history.push({
-                date: inv.billDate,
-                type: 'SALES',
-                billNo: inv.billNo,
-                qty: item ? item.quantity : 0,
-                color: 'red'
-            });
+            const item = inv.cartItems.find(i => (i.productId || i._id).toString() === productId.toString());
+            if (item) {
+                history.push({
+                    date: inv.billDate,
+                    type: 'SALES',
+                    billNo: inv.billNo,
+                    qty: item.quantity || item.qty || 0,
+                    color: 'red'
+                });
+            }
         });
 
-        // Date wise sort pannuvom (Latest first)
+        // Date sorting
         history.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         res.json({
@@ -255,6 +270,7 @@ router.get('/stock-report/:productId', async (req, res) => {
         });
 
     } catch (e) {
+        console.error("Report Error:", e.message);
         res.status(500).json({ error: e.message });
     }
 });

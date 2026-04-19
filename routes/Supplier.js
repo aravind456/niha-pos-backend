@@ -50,4 +50,28 @@ router.delete('/delete-supplier/:id', async (req, res) => {
         res.status(400).json({ error: "Delete failed" });
     }
 });
+
+// routes/Supplier.js
+
+// SUPPLIER PAYMENT RECEIPT (Namma avangalukku kaasu kudutha)
+router.post('/payment-out', async (req, res) => {
+    try {
+        const { supplierId, userMobile, amountPaid } = req.body;
+
+        // Supplier-oda currentBalance-la irundhu amount-ai minus panrom
+        const updatedSupplier = await Supplier.findOneAndUpdate(
+            { _id: supplierId, userMobile: userMobile },
+            { $inc: { currentBalance: -amountPaid } },
+            { new: true }
+        );
+
+        res.status(200).json({ 
+            success: true, 
+            message: "Payment Recorded", 
+            newBalance: updatedSupplier.currentBalance 
+        });
+    } catch (err) {
+        res.status(400).json({ error: "Payment update failed" });
+    }
+});
 module.exports = router;

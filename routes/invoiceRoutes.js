@@ -57,6 +57,43 @@ router.get('/customer-bills/:customerId', async (req, res) => {
         res.status(500).json({ error: e.message });
     }
 });
+
+
+// routes/invoiceRoutes.js
+
+const Product = require('../models/Product'); // Product model-ai import pannunga
+
+router.post('/save-bill', async (req, res) => {
+    try {
+        // ... (Neenga vachirukka existing code) ...
+
+        const savedInvoice = await newInvoice.save();
+
+        // 🔥 STOCK MINUS LOGIC START
+        if (req.body.items && req.body.items.length > 0) {
+            const bulkOps = req.body.items.map(item => ({
+                updateOne: {
+                    filter: { _id: item.productId, userMobile: req.body.userMobile },
+                    update: { $inc: { stock: -item.quantity } } // 'stock' nu unga schema-la irukkumnu nenaikaraen
+                }
+            }));
+            await Product.bulkWrite(bulkOps);
+        }
+        // STOCK MINUS LOGIC END
+
+        // Customer Ledger Update (Already neenga vachirukkadhai appadiye maintain pannalam)
+        if (req.body.creditAmount > 0 && req.body.customerId) {
+            await Customer.findByIdAndUpdate(
+                { _id: req.body.customerId, userMobile: req.body.userMobile },
+                { $inc: { currentBalance: req.body.creditAmount } }
+            );
+        }
+
+        res.status(201).json({ success: true, message: "Bill Saved & Stock Updated!", billNo: savedInvoice.billNo });
+    } catch (err) {
+        res.status(400).json({ success: false, message: err.message });
+    }
+});
 // ==========================================
 // 1. SAVE BILL API
 // ==========================================

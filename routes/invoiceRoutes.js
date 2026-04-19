@@ -61,24 +61,30 @@ router.post('/save-bill', async (req, res) => {
         const savedInvoice = await newInvoice.save();
 
         // 🔥 1. STOCK UPDATE (DECREASE) - Safe Logic
-        if (items && items.length > 0) {
-            const bulkOps = items.map(item => {
-                // 🟢 Inga thaan fix: quantity illa qty rendu field-aiyum check panrom
-                const q = Number(item.quantity) || Number(item.qty) || 0;
-                
-                return {
-                    updateOne: {
-                        filter: { 
-                            _id: item.productId, 
-                            userMobile: userMobile 
-                        },
-                        // Number NaN-ah irundhaalum 0-nu eduthukum, crash aagadhu
-                        update: { $inc: { stock: -Math.abs(q) } } 
-                    }
-                };
-            });
-            await Product.bulkWrite(bulkOps);
-        }
+        // 🔥 1. STOCK UPDATE (DECREASE) - UPDATED LOGIC
+if (items && items.length > 0) {
+    const bulkOps = items.map(item => {
+        // 🔴 PROBLEM: Inga thaan Number(item.quantity) NaN-ah maarudhu
+        // FIX: 'quantity' illa 'qty' rendu key-aiyum check panni, illa na 0 vaikkarom
+        const q = Number(item.quantity) || Number(item.qty) || 0;
+
+        return {
+            updateOne: {
+                filter: { 
+                    _id: item.productId, 
+                    userMobile: userMobile 
+                },
+                // q-vai direct-ah use pannunga, Number conversion mela panniyachu
+                update: { $inc: { stock: -Math.abs(q) } } 
+            }
+        };
+    });
+
+    // Inga logic check panna oru console log:
+    console.log("Bulk Ops for Stock:", JSON.stringify(bulkOps));
+
+    await Product.bulkWrite(bulkOps);
+}
 
         // 2. CUSTOMER LEDGER UPDATE - null check added
         // customerId 'null' (string) ah vandhaalum handle pannum

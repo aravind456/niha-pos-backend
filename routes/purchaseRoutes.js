@@ -26,7 +26,7 @@ router.post('/save-purchase', async (req, res) => {
                 userMobile: userMobile 
             },
             // Number(item.quantity) NaN-ah irundha 0-nu eduthukkum
-            update: { $inc: { stock: Number(item.quantity) || 0 } }
+            update: { $inc: { stock: -Math.abs(Number(item.quantity) || 0) } }
         }
     }));
     await Product.bulkWrite(bulkOps);

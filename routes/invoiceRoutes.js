@@ -37,75 +37,15 @@ try {
 // 1. ஒரு கஸ்டமரின் பில்களை மட்டும் எடுக்க (Ledger-க்காக)
 // =========================================
 
-// Purchase history fetch panna indha route-ai use pannunga
-router.get('/customer-bills/:customerId', async (req, res) => {
-    try {
-        const { customerId } = req.params;
-
-        if (!mongoose.Types.ObjectId.isValid(customerId)) {
-            return res.status(400).json({ error: "Invalid Customer ID format" });
-        }
-
-        const bills = await Invoice.find({ 
-            customerId: new mongoose.Types.ObjectId(customerId), 
-            // 🔴 Schema-la 'paymentMode' nu irukku, 'paymentType' illa
-            paymentMode: "Credit" 
-        }).sort({ billDate: -1 }); // 'date' ku badhula 'billDate' use pannunga
-        
-        res.json(bills);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-
-// routes/invoiceRoutes.js
-
-const Product = require('../models/Product'); // Product model-ai import pannunga
-
-router.post('/save-bill', async (req, res) => {
-    try {
-        // ... (Neenga vachirukka existing code) ...
-
-        const savedInvoice = await newInvoice.save();
-
-        // 🔥 STOCK MINUS LOGIC START
-        if (req.body.items && req.body.items.length > 0) {
-            const bulkOps = req.body.items.map(item => ({
-                updateOne: {
-                    filter: { _id: item.productId, userMobile: req.body.userMobile },
-                    update: { $inc: { stock: -item.quantity } } // 'stock' nu unga schema-la irukkumnu nenaikaraen
-                }
-            }));
-            await Product.bulkWrite(bulkOps);
-        }
-        // STOCK MINUS LOGIC END
-
-        // Customer Ledger Update (Already neenga vachirukkadhai appadiye maintain pannalam)
-        if (req.body.creditAmount > 0 && req.body.customerId) {
-            await Customer.findByIdAndUpdate(
-                { _id: req.body.customerId, userMobile: req.body.userMobile },
-                { $inc: { currentBalance: req.body.creditAmount } }
-            );
-        }
-
-        res.status(201).json({ success: true, message: "Bill Saved & Stock Updated!", billNo: savedInvoice.billNo });
-    } catch (err) {
-        res.status(400).json({ success: false, message: err.message });
-    }
-});
-// ==========================================
-// 1. SAVE BILL API
-// ==========================================
 router.post('/save-bill', async (req, res) => {
     try {
         if (!req.body.userMobile) {
             return res.status(400).json({ success: false, message: "userMobile is required!" });
         }
 
-        const lastInvoice = await Invoice.findOne({ userMobile: req.body.userMobile }).sort({ billNo: -1 }); //id
+        // Bill Number Logic
+        const lastInvoice = await Invoice.findOne({ userMobile: req.body.userMobile }).sort({ billNo: -1 });
         let nextBillNo = "1"; 
-        
         if (lastInvoice && lastInvoice.billNo) {
             nextBillNo = (parseInt(lastInvoice.billNo) + 1).toString();
         }
@@ -116,29 +56,44 @@ router.post('/save-bill', async (req, res) => {
             customerName: req.body.customerName || "Cash",
             customerMobile: req.body.customerMobile || "",
             salesmanName: req.body.salesmanName || "Self",
-            cartItems: req.body.items, 
+            cartItems: req.body.items, // Flutter-la 'items' nu anupuveenga
             billDate: req.body.createdAt || Date.now()
         });
 
+        // 🟢 Step 1: Save the Invoice
         const savedInvoice = await newInvoice.save();
 
-        // Customer Ledger Update (If Credit)
+        // 🟢 Step 2: Stock Auto-Minus Logic
+        if (req.body.items && req.body.items.length > 0) {
+            const bulkOps = req.body.items.map(item => ({
+                updateOne: {
+                    filter: { 
+                        _id: item.productId, // Flutter-la 'productId' nu send pannanum
+                        userMobile: req.body.userMobile 
+                    },
+                    update: { $inc: { stock: -item.quantity } } // Stock-ai kuraikkum logic
+                }
+            }));
+            await Product.bulkWrite(bulkOps);
+        }
+
+        // 🟢 Step 3: Customer Ledger Update (If Credit)
         if (req.body.creditAmount > 0 && req.body.customerId) {
-            await Customer.findByIdAndUpdate(
-                { _id: req.body.customerId, userMobile: req.body.userMobile }, // Match both
+            await Customer.findOneAndUpdate(
+                { _id: req.body.customerId, userMobile: req.body.userMobile },
                 { $inc: { currentBalance: req.body.creditAmount } }
             );
-            } 
-        
+        }
 
         res.status(201).json({ 
             success: true, 
-            message: "Bill Saved!", 
+            message: "Bill Saved & Stock Updated!", 
             billNo: savedInvoice.billNo 
         });
 
     } catch (err) {
-        res.status(400).json({ success: false, message: err.message });
+        console.error("Save Bill Error:", err);
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 
@@ -148,10 +103,10 @@ router.post('/save-bill', async (req, res) => {
 router.get('/today-sales/:mobile', async (req, res) => {
     try {
         const mobile = req.params.mobile;
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0); 
-        const endOfDay = new Date();
-        endOfDay.setHours(23, 59, 59, 999); 
+        const start = new Date();
+        start.setHours(0, 0, 0, 0); 
+        const end = new Date();
+        end.setHours(23, 59, 59, 999); 
 
         const invoices = await Invoice.find({
             userMobile: mobile,
@@ -162,8 +117,6 @@ router.get('/today-sales/:mobile', async (req, res) => {
 
         invoices.forEach(inv => {
             const billTotal = Number(inv.totalAmount) || 0;
-            
-            // Payment Mode-ai small letters-ah mathi check pandrom (Error varama irukka)
             const mode = (inv.paymentMode || "").toLowerCase();
 
             if (mode === 'multi') {
@@ -183,7 +136,6 @@ router.get('/today-sales/:mobile', async (req, res) => {
             }
         });
 
-        // 3. FINALLY SEND DATA
         res.status(200).json({ 
             totalSales: total, 
             cashSales: cash, 
@@ -192,7 +144,6 @@ router.get('/today-sales/:mobile', async (req, res) => {
         });
 
     } catch (e) {
-        console.error("Dashboard Error:", e.message);
         res.status(500).json({ error: "Server error occurred" });
     }
 });

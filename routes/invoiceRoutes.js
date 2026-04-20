@@ -396,6 +396,21 @@ router.get('/report/item-wise', async (req, res) => {
     }
 });
 
+// கஸ்டமர் ரூட்டை இப்படி அப்டேட் செய்யுங்கள்
+router.get('/customer-bills/:userMobile/:customerId', async (req, res) => {
+    try {
+        const bills = await Invoice.find({ 
+            userMobile: req.params.userMobile, // userMobile-ஐயும் செக் செய்கிறோம்
+            customerId: req.params.customerId,
+            paymentMode: "Credit" 
+        }).sort({ billDate: -1 });
+        
+        res.status(200).json(bills);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch bills" });
+    }
+});
+
 router.get('/customer-history/:userMobile/:customerName', async (req, res) => {
     try {
         const { userMobile, customerName } = req.params;

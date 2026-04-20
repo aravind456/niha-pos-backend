@@ -437,18 +437,21 @@ router.get('/customer-history/:userMobile/:customerName', async (req, res) => {
 
 // routes/invoiceRoutes.js
 
-router.get('/customer-outstanding/:customerId', async (req, res) => {
+// invoice.js -ல் இதைத் தேடி மாத்துங்க
+router.get('/customer-outstanding-list/:userMobile', async (req, res) => {
     try {
-        // வெறும் கஸ்டமர்களை மட்டும் எடுப்போம்
-        const customers = await Customer.find({ userMobile: req.params.userMobile });
+        const customers = await Customer.find({ userMobile: req.params.userMobile }).sort({ name: 1 });
         
-        // அவுட்ஸ்டாண்டிங் (பாலன்ஸ்) உள்ளவர்களை மட்டும் பில்டர் பண்ணி அனுப்புவோம்
-        const outstandingData = customers.filter(c => {
-            const total = (Number(c.openingBalance) || 0) + (Number(c.currentBalance) || 0);
-            return total > 0; // பாலன்ஸ் இருப்பவர்கள் மட்டும்
+        // இங்க கண்டிஷன் இல்லாம எல்லா கஸ்டமரையும் அனுப்புறோம்
+        const formattedData = customers.map(c => {
+            const customerObj = c.toObject();
+            const opening = Number(customerObj.openingBalance) || 0;
+            const current = Number(customerObj.currentBalance) || 0;
+            customerObj.totalBalance = opening + current;
+            return customerObj;
         });
 
-        res.json(outstandingData);
+        res.json(formattedData);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

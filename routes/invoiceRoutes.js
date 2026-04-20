@@ -415,7 +415,7 @@ router.get('/customer-bills/:customerId', async (req, res) => {
     try {
         // Inga 'Credit' mode-la irukara bills-ai mattum filter panrom
         const bills = await Invoice.find({ 
-            customerId: customerId,
+            customerId: req.params.customerId,
             paymentMode: "Credit" 
         }).sort({ billDate: -1 });
         

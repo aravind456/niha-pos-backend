@@ -80,4 +80,25 @@ router.get('/customer-bills/:customerId', async (req, res) => {
     }
 });
 
+// Customer-க்கு பணம் வாங்கும்போது (Receipt)
+router.post('/receipt-in', async (req, res) => {
+    try {
+        const { customerId, userMobile, amountReceived } = req.body;
+        
+        const updatedCustomer = await Customer.findOneAndUpdate(
+            { _id: customerId, userMobile: userMobile },
+            { $inc: { currentBalance: -Number(amountReceived) } }, 
+            { new: true }
+        );
+
+        if (!updatedCustomer) {
+            return res.status(404).json({ error: "Customer not found" });
+        }
+
+        res.status(200).json({ success: true, newBalance: updatedCustomer.currentBalance });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
 module.exports = router;

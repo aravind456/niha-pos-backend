@@ -415,7 +415,7 @@ router.get('/customer-bills/:customerId', async (req, res) => {
     try {
         // Inga 'Credit' mode-la irukara bills-ai mattum filter panrom
         const bills = await Invoice.find({ 
-            customerId: req.params.customerId,
+            customerId: customerId,
             paymentMode: "Credit" 
         }).sort({ billDate: -1 });
         
@@ -426,20 +426,6 @@ router.get('/customer-bills/:customerId', async (req, res) => {
 });
 
 // routes/invoiceRoutes.js
-
-router.get('/customer-bills/:supplierId', async (req, res) => {
-    try {
-        const { supplierId } = req.params;
-        const bills = await Purchase.find({ 
-            supplierId: supplierId, 
-            paymentType: "Credit" 
-        }).sort({ date: -1 }); 
-        
-        res.json(bills);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
 
 router.get('/customer-outstanding/:customerId', async (req, res) => {
     try {

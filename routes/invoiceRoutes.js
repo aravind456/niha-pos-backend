@@ -336,11 +336,29 @@ if (opStock > 0) {
 router.delete('/:id', async (req, res) => {
     try {
         const billId = req.params.id;
-        // பில்லை முழுமையாக டெலீட் செய்ய:
+
+        // 1. முதல்ல இந்த பில்லோட டீடைல்ஸ் எடுக்குறோம் (அமௌன்ட் & கஸ்டமர் ஐடி தேவை)
+        const bill = await Invoice.findById(billId);
+
+        if (!bill) {
+            return res.status(404).json({ success: false, message: "Bill not found" });
+        }
+
+        // 2. கஸ்டமர் டேபிள்ல போயி அந்த பில்லோட அமௌன்ட்டை கழிக்கிறோம் ($inc கூட - போடுறோம்)
+        if (bill.customerId) {
+            await Customer.findByIdAndUpdate(
+                bill.customerId,
+                { $inc: { currentBalance: -bill.totalAmount } } 
+            );
+        }
+
+        // 3. இப்போ பில்லை முழுமையாக டெலீட் செய்றோம்
         await Invoice.findByIdAndDelete(billId); 
         
-        res.json({ success: true, message: "Bill Deleted Successfully" });
+        res.json({ success: true, message: "Bill Deleted and Balance Updated" });
+
     } catch (e) {
+        console.error("Delete Error:", e.message);
         res.status(500).json({ success: false, error: e.message });
     }
 });

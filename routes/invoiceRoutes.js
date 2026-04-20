@@ -410,18 +410,23 @@ router.get('/customer-history/:userMobile/:customerName', async (req, res) => {
     }
 });
 
-// GET ONLY CREDIT BILLS FOR A CUSTOMER
-router.get('/customer-bills/:customerId', async (req, res) => {
+// invoice.js -ல் இதை அப்படியே மாத்துங்க
+router.get('/customer-bills/:userMobile/:customerId', async (req, res) => {
     try {
-        // Inga 'Credit' mode-la irukara bills-ai mattum filter panrom
+        const { userMobile, customerId } = req.params;
+
+        // Credit பில்களை மட்டும் எடுக்கிறோம்
         const bills = await Invoice.find({ 
-            customerId: req.params.customerId,
+            userMobile: userMobile, 
+            customerId: customerId, 
             paymentMode: "Credit" 
         }).sort({ billDate: -1 });
         
+        console.log(`Found ${bills.length} bills for customer: ${customerId}`);
         res.status(200).json(bills);
     } catch (err) {
-        res.status(500).json({ error: "Failed to fetch bills" });
+        console.error("Fetch Bills Error:", err);
+        res.status(500).json({ error: "Failed to fetch bills", detail: err.message });
     }
 });
 

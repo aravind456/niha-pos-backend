@@ -69,15 +69,23 @@ router.delete('/delete-customer/:id', async (req, res) => {
 //router.get('/customer-bills/:customerId', async (req, res) => {
 router.get('/customer-bills/:userMobile/:customerId', async (req, res) => {
     try {
+        const { userMobile, customerId } = req.params;
+
+        // String-ஐ ObjectId-ஆக மாற்றுகிறோம்
+        const mongoose = require('mongoose');
+        const queryId = new mongoose.Types.ObjectId(customerId);
+
         const bills = await Invoice.find({ 
-            userMobile: req.params.userMobile, // userMobile-ஐயும் செக் செய்கிறோம்
-            customerId: req.params.customerId,
+            userMobile: userMobile, 
+            customerId: queryId, // மாற்றப்பட்ட ID
             paymentMode: "Credit" 
         }).sort({ billDate: -1 });
         
+        console.log("Found Bills:", bills.length); // எத்தனை பில் வந்தது என்று லாக்-ல் பார்க்க
         res.status(200).json(bills);
     } catch (err) {
-        res.status(500).json({ error: "Failed to fetch bills" });
+        console.error("Fetch Error Detail:", err); // என்ன எர்ரர் என்று லாக்-ல் காட்டும்
+        res.status(500).json({ error: "Failed to fetch bills", detail: err.message });
     }
 });
 

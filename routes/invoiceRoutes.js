@@ -399,17 +399,23 @@ router.get('/report/item-wise', async (req, res) => {
 // கஸ்டமர் ரூட்டை இப்படி அப்டேட் செய்யுங்கள்
 router.get('/customer-bills/:userMobile/:customerId', async (req, res) => {
     try {
+        const { userMobile, customerId } = req.params;
+
+        // String-ஐ ObjectId-ஆக மாற்றுகிறோம்
+        const mongoose = require('mongoose');
+        const queryId = new mongoose.Types.ObjectId(customerId);
+
         const bills = await Invoice.find({ 
-            userMobile: req.params.userMobile, 
-            customerId: req.params.customerId,
-            // 🔴 இங்கே உங்கள் பில்லில் "Credit" என்று இருந்தால் மட்டுமே வரும்
-            // ஒருவேளை நீங்கள் "multi" என்று போட்டிருந்தால் வராது.
-            $or: [{ paymentMode: "Credit" }, { paymentMode: "multi" }] 
+            userMobile: userMobile, 
+            customerId: queryId, // மாற்றப்பட்ட ID
+            paymentMode: "Credit" 
         }).sort({ billDate: -1 });
         
+        console.log("Found Bills:", bills.length); // எத்தனை பில் வந்தது என்று லாக்-ல் பார்க்க
         res.status(200).json(bills);
     } catch (err) {
-        res.status(500).json({ error: "Failed to fetch bills" });
+        console.error("Fetch Error Detail:", err); // என்ன எர்ரர் என்று லாக்-ல் காட்டும்
+        res.status(500).json({ error: "Failed to fetch bills", detail: err.message });
     }
 });
 

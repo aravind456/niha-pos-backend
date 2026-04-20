@@ -473,4 +473,54 @@ router.get('/customer-outstanding/:customerId', async (req, res) => {
     }
 });
 
+// Receipt / Payment வசூல் செய்யும் போது
+router.post('/add-receipt', async (req, res) => {
+    try {
+        const { 
+            customerId, 
+            amountReceived, 
+            date, 
+            paymentMode, // Cash, Gpay, Cheque etc.
+            description, 
+            userMobile 
+        } = req.body;
+
+        // 1. கஸ்டமர் இருக்காரான்னு செக் பண்றோம்
+        const customer = await Customer.findOne({ _id: customerId, userMobile: userMobile });
+        if (!customer) {
+            return res.status(404).json({ success: false, message: "Customer not found" });
+        }
+
+        // 2. Receipt டேட்டாவை ஒரு கலெக்ஷன்ல சேவ் பண்றோம் (இதுதான் லெட்ஜருக்கு உதவும்)
+        // உங்களிடம் Receipt மாடல் இல்லைனா Invoice மாடல்லயே 'type: "RECEIPT"'னு போட்டு சேவ் பண்ணலாம்
+        // இப்போதைக்கு ஒரு புது Receipt என்ட்ரி போடுறோம்:
+        const receiptData = {
+            customerId,
+            totalAmount: Number(amountReceived),
+            billDate: date || new Date(),
+            paymentMode: paymentMode || "Cash",
+            description: description || "Payment Received",
+            type: "RECEIPT", // இது லெட்ஜர்ல பில்லையும் இதையும் பிரிக்க உதவும்
+            userMobile
+        };
+
+        // குறிப்பு: உங்களிடம் Receipt Schema இல்லைனா, Invoice Schema-விலேயே இதையும் சேவ் பண்ணலாம்
+        // ஏன்னா லெட்ஜர் எடுக்கும்போது ஒரே கலெக்ஷன்ல இருந்தா ஈஸியா இருக்கும்.
+        const newReceipt = new Invoice(receiptData); 
+        await newReceipt.save();
+
+        // 3. கஸ்டமரோட தற்போதைய பேலன்ஸை குறைக்கிறோம் ($inc கூட minus)
+        await Customer.findOneAndUpdate(
+            { _id: customerId, userMobile: userMobile },
+            { $inc: { currentBalance: -Math.abs(Number(amountReceived)) } }
+        );
+
+        res.json({ success: true, message: "Receipt added and Balance updated!" });
+
+    } catch (e) {
+        console.error("Receipt Error:", e.message);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 module.exports = router;

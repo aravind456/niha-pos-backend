@@ -66,10 +66,11 @@ router.delete('/delete-customer/:id', async (req, res) => {
 });
 
 // GET ONLY CREDIT BILLS FOR A CUSTOMER
-router.get('/customer-bills/:customerId', async (req, res) => {
+//router.get('/customer-bills/:customerId', async (req, res) => {
+router.get('/customer-bills/:userMobile/:customerId', async (req, res) => {
     try {
-        // Inga 'Credit' mode-la irukara bills-ai mattum filter panrom
         const bills = await Invoice.find({ 
+            userMobile: req.params.userMobile, // userMobile-ஐயும் செக் செய்கிறோம்
             customerId: req.params.customerId,
             paymentMode: "Credit" 
         }).sort({ billDate: -1 });

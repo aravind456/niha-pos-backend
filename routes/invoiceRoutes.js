@@ -407,7 +407,7 @@ router.get('/customer-bills/:userMobile/:customerId', async (req, res) => {
 
         const bills = await Invoice.find({ 
             userMobile: userMobile, 
-            customerId: queryId, // மாற்றப்பட்ட ID
+            customerId: customerId, // மாற்றப்பட்ட ID
             paymentMode: "Credit" 
         }).sort({ billDate: -1 });
         

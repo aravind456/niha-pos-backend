@@ -410,6 +410,21 @@ router.get('/customer-history/:userMobile/:customerName', async (req, res) => {
     }
 });
 
+// GET ONLY CREDIT BILLS FOR A CUSTOMER
+router.get('/customer-bills/:customerId', async (req, res) => {
+    try {
+        // Inga 'Credit' mode-la irukara bills-ai mattum filter panrom
+        const bills = await Invoice.find({ 
+            customerId: req.params.customerId,
+            paymentMode: "Credit" 
+        }).sort({ billDate: -1 });
+        
+        res.status(200).json(bills);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch bills" });
+    }
+});
+
 // routes/invoiceRoutes.js
 
 router.get('/customer-outstanding/:customerId', async (req, res) => {

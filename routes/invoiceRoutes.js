@@ -415,6 +415,10 @@ router.get('/customer-bills/:userMobile/:customerId', async (req, res) => {
     try {
         const { userMobile, customerId } = req.params;
 
+        if (customerId === "$id" || customerId.length < 10) {
+            return res.status(400).json({ error: "Invalid Customer ID" });
+        }
+
         // Credit பில்களை மட்டும் எடுக்கிறோம்
         const bills = await Invoice.find({ 
             userMobile: userMobile, 

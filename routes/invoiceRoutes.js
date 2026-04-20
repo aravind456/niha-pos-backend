@@ -13,12 +13,15 @@ const invoiceSchema = new mongoose.Schema({
     salesmanName: String,
     cartItems: Array,
     totalAmount: Number,
-    paymentMode: String,
+   // paymentMode: String,
     billDate: { type: Date, default: Date.now },
     // Multi payment-க்காக இவை தேவை
     cashAmount: Number,
     onlineAmount: Number,
-    creditAmount: Number
+    creditAmount: Number,
+    type: { type: String, default: "SALES" }, // "SALES" அல்லது "RECEIPT"
+    paymentMode: { type: String }, // Cash, Gpay
+    description: { type: String },
 });
 
 // 2. Model Creation
@@ -473,52 +476,40 @@ router.get('/customer-outstanding/:customerId', async (req, res) => {
     }
 });
 
-// Receipt / Payment வசூல் செய்யும் போது
 router.post('/add-receipt', async (req, res) => {
     try {
-        const { 
-            customerId, 
-            amountReceived, 
-            date, 
-            paymentMode, // Cash, Gpay, Cheque etc.
-            description, 
-            userMobile 
-        } = req.body;
+        console.log("Incoming Receipt Data:", req.body); // என்ன டேட்டா வருதுனு பாக்கலாம்
 
-        // 1. கஸ்டமர் இருக்காரான்னு செக் பண்றோம்
-        const customer = await Customer.findOne({ _id: customerId, userMobile: userMobile });
-        if (!customer) {
-            return res.status(404).json({ success: false, message: "Customer not found" });
-        }
+        const { customerId, amountReceived, date, paymentMode, userMobile } = req.body;
 
-        // 2. Receipt டேட்டாவை ஒரு கலெக்ஷன்ல சேவ் பண்றோம் (இதுதான் லெட்ஜருக்கு உதவும்)
-        // உங்களிடம் Receipt மாடல் இல்லைனா Invoice மாடல்லயே 'type: "RECEIPT"'னு போட்டு சேவ் பண்ணலாம்
-        // இப்போதைக்கு ஒரு புது Receipt என்ட்ரி போடுறோம்:
-        const receiptData = {
-            customerId,
+        // 1. ஒரு புது ஆப்ஜெக்ட்டை உருவாக்குறோம்
+        const receiptEntry = new Invoice({
+            customerId: customerId,
             totalAmount: Number(amountReceived),
             billDate: date || new Date(),
+            type: "RECEIPT", // இது ரொம்ப முக்கியம்!
             paymentMode: paymentMode || "Cash",
-            description: description || "Payment Received",
-            type: "RECEIPT", // இது லெட்ஜர்ல பில்லையும் இதையும் பிரிக்க உதவும்
-            userMobile
-        };
+            userMobile: userMobile,
+            // மத்த required ஃபீல்டுகளுக்கு டம்மி டேட்டா (Schema எர்ரர் வராம இருக்க)
+            items: [], 
+            totalTax: 0,
+            billNo: "REC-" + Date.now().toString().slice(-6) // ஒரு தற்காலிக நம்பர்
+        });
 
-        // குறிப்பு: உங்களிடம் Receipt Schema இல்லைனா, Invoice Schema-விலேயே இதையும் சேவ் பண்ணலாம்
-        // ஏன்னா லெட்ஜர் எடுக்கும்போது ஒரே கலெக்ஷன்ல இருந்தா ஈஸியா இருக்கும்.
-        const newReceipt = new Invoice(receiptData); 
-        await newReceipt.save();
+        // 2. சேவ் பண்ண ட்ரை பண்றோம்
+        const savedReceipt = await receiptEntry.save();
+        console.log("Saved Successfully:", savedReceipt);
 
-        // 3. கஸ்டமரோட தற்போதைய பேலன்ஸை குறைக்கிறோம் ($inc கூட minus)
+        // 3. கஸ்டமர் பேலன்ஸை அப்டேட் பண்றோம்
         await Customer.findOneAndUpdate(
             { _id: customerId, userMobile: userMobile },
             { $inc: { currentBalance: -Math.abs(Number(amountReceived)) } }
         );
 
-        res.json({ success: true, message: "Receipt added and Balance updated!" });
+        res.json({ success: true, message: "Receipt Saved!" });
 
     } catch (e) {
-        console.error("Receipt Error:", e.message);
+        console.error("Save Error Detail:", e); // இங்க தான் என்ன தப்புனு காட்டும்
         res.status(500).json({ success: false, error: e.message });
     }
 });

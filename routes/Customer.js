@@ -17,18 +17,18 @@ router.post('/add-customer', async (req, res) => {
 });
 
 // GET CUSTOMERS
+// customer.js
 router.get('/get-customers/:userMobile', async (req, res) => {
     try {
         const customers = await Customer.find({ userMobile: req.params.userMobile }).sort({ name: 1 });
         
-        // டேட்டா அனுப்பும் முன் மொபைல் நம்பர் செக்
         const formattedCustomers = customers.map(c => {
             const customerObj = c.toObject();
+            // NaN வராமல் தடுக்க 0 செட் பண்றோம்
             const opening = Number(customerObj.openingBalance) || 0;
             const current = Number(customerObj.currentBalance) || 0;
-            customerObj.totalBalance = opening + current; // Inga kooti anupurom
-            // இதில் 'mobile' அல்லது 'customerMobile' - உங்கள் மாடலில் உள்ள பெயரைக் கொடுங்கள்
-            //customerObj.mobile = customerObj.mobile || customerObj.customerMobile || "No Number";
+            
+            customerObj.totalBalance = opening + current;
             customerObj.mobile = customerObj.mobileNumber || customerObj.mobile || "No Number";
             return customerObj;
         });

@@ -2,12 +2,14 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
+const Customer = require('../models/Customer');
 
 // 1. Schema Definition
 const invoiceSchema = new mongoose.Schema({
     userMobile: { type: String, required: true },
     billNo: { type: String, required: true },
-    customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' }, // இது மிக முக்கியம்
+    //customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' }, // இது மிக முக்கியம்
+    customerId: { type: String },
     customerName: String,
     customerMobile: String,
     salesmanName: String,
@@ -437,12 +439,16 @@ router.get('/customer-history/:userMobile/:customerName', async (req, res) => {
 
 router.get('/customer-outstanding/:customerId', async (req, res) => {
     try {
-        const bills = await Invoice.find({ 
-            customerId: req.params.customerId, 
-            paymentType: "Credit" 
-        }).sort({ createdAt: -1 }); // Pudhu bill mela varum
+        // வெறும் கஸ்டமர்களை மட்டும் எடுப்போம்
+        const customers = await Customer.find({ userMobile: req.params.userMobile });
         
-        res.json(bills);
+        // அவுட்ஸ்டாண்டிங் (பாலன்ஸ்) உள்ளவர்களை மட்டும் பில்டர் பண்ணி அனுப்புவோம்
+        const outstandingData = customers.filter(c => {
+            const total = (Number(c.openingBalance) || 0) + (Number(c.currentBalance) || 0);
+            return total > 0; // பாலன்ஸ் இருப்பவர்கள் மட்டும்
+        });
+
+        res.json(outstandingData);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

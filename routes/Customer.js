@@ -81,10 +81,14 @@ router.get('/customer-bills/:customerId', async (req, res) => {
 });
 
 // Customer-க்கு பணம் வாங்கும்போது (Receipt)
+// ✅ இது கண்டிப்பாக POST ஆக இருக்க வேண்டும்
 router.post('/receipt-in', async (req, res) => {
     try {
         const { customerId, userMobile, amountReceived } = req.body;
         
+        // 🔍 செக் பண்ணுங்க: இந்த console log வருதான்னு பாருங்க
+        console.log("Data received:", customerId, amountReceived);
+
         const updatedCustomer = await Customer.findOneAndUpdate(
             { _id: customerId, userMobile: userMobile },
             { $inc: { currentBalance: -Number(amountReceived) } }, 
@@ -92,7 +96,7 @@ router.post('/receipt-in', async (req, res) => {
         );
 
         if (!updatedCustomer) {
-            return res.status(404).json({ error: "Customer not found" });
+            return res.status(404).json({ error: "Customer Not Found" });
         }
 
         res.status(200).json({ success: true, newBalance: updatedCustomer.currentBalance });

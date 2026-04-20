@@ -2,14 +2,12 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
-const Customer = require('../models/Customer');
 
 // 1. Schema Definition
 const invoiceSchema = new mongoose.Schema({
     userMobile: { type: String, required: true },
     billNo: { type: String, required: true },
-    //customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' }, // இது மிக முக்கியம்
-    customerId: { type: String },
+    customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' }, // இது மிக முக்கியம்
     customerName: String,
     customerMobile: String,
     salesmanName: String,
@@ -398,29 +396,6 @@ router.get('/report/item-wise', async (req, res) => {
     }
 });
 
-// கஸ்டமர் ரூட்டை இப்படி அப்டேட் செய்யுங்கள்
-router.get('/customer-bills/:userMobile/:customerId', async (req, res) => {
-    try {
-        const { userMobile, customerId } = req.params;
-
-        // String-ஐ ObjectId-ஆக மாற்றுகிறோம்
-        const mongoose = require('mongoose');
-        const queryId = new mongoose.Types.ObjectId(customerId);
-
-        const bills = await Invoice.find({ 
-            userMobile: userMobile, 
-            customerId: customerId, // மாற்றப்பட்ட ID
-            paymentMode: "Credit" 
-        }).sort({ billDate: -1 });
-        
-        console.log("Found Bills:", bills.length); // எத்தனை பில் வந்தது என்று லாக்-ல் பார்க்க
-        res.status(200).json(bills);
-    } catch (err) {
-        console.error("Fetch Error Detail:", err); // என்ன எர்ரர் என்று லாக்-ல் காட்டும்
-        res.status(500).json({ error: "Failed to fetch bills", detail: err.message });
-    }
-});
-
 router.get('/customer-history/:userMobile/:customerName', async (req, res) => {
     try {
         const { userMobile, customerName } = req.params;
@@ -437,21 +412,14 @@ router.get('/customer-history/:userMobile/:customerName', async (req, res) => {
 
 // routes/invoiceRoutes.js
 
-// invoice.js -ல் இதைத் தேடி மாத்துங்க
-router.get('/customer-outstanding-list/:userMobile', async (req, res) => {
+router.get('/customer-outstanding/:customerId', async (req, res) => {
     try {
-        const customers = await Customer.find({ userMobile: req.params.userMobile }).sort({ name: 1 });
+        const bills = await Invoice.find({ 
+            customerId: req.params.customerId, 
+            paymentType: "Credit" 
+        }).sort({ createdAt: -1 }); // Pudhu bill mela varum
         
-        // இங்க கண்டிஷன் இல்லாம எல்லா கஸ்டமரையும் அனுப்புறோம்
-        const formattedData = customers.map(c => {
-            const customerObj = c.toObject();
-            const opening = Number(customerObj.openingBalance) || 0;
-            const current = Number(customerObj.currentBalance) || 0;
-            customerObj.totalBalance = opening + current;
-            return customerObj;
-        });
-
-        res.json(formattedData);
+        res.json(bills);
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

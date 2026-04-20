@@ -19,33 +19,22 @@ router.post('/add-customer', async (req, res) => {
 // GET CUSTOMERS
 router.get('/get-customers/:userMobile', async (req, res) => {
     try {
-        // userMobile-ஐ நம்பராக மாற்றி தேடுகிறோம் (String-ஆ வந்தாலும் நம்பரா மாத்திடும்)
-        const mobile = req.params.userMobile;
+        const customers = await Customer.find({ userMobile: req.params.userMobile }).sort({ name: 1 });
         
-        const customers = await Customer.find({ 
-            $or: [
-                { userMobile: mobile },
-                { userMobile: String(mobile) },
-                { userMobile: Number(mobile) } 
-            ]
-        }).sort({ name: 1 });
-
-        if (customers.length === 0) {
-            console.log("No customers found for mobile:", mobile);
-        }
-
+        // டேட்டா அனுப்பும் முன் மொபைல் நம்பர் செக்
         const formattedCustomers = customers.map(c => {
             const customerObj = c.toObject();
-            customerObj.openingBalance = Number(customerObj.openingBalance) || 0;
-            customerObj.currentBalance = Number(customerObj.currentBalance) || 0;
-            customerObj.totalBalance = customerObj.openingBalance + customerObj.currentBalance;
+            const opening = Number(customerObj.openingBalance) || 0;
+            const current = Number(customerObj.currentBalance) || 0;
+            customerObj.totalBalance = opening + current; // Inga kooti anupurom
+            // இதில் 'mobile' அல்லது 'customerMobile' - உங்கள் மாடலில் உள்ள பெயரைக் கொடுங்கள்
+            //customerObj.mobile = customerObj.mobile || customerObj.customerMobile || "No Number";
             customerObj.mobile = customerObj.mobileNumber || customerObj.mobile || "No Number";
             return customerObj;
         });
 
         res.status(200).json(formattedCustomers);
     } catch (err) { 
-        console.error("Backend Error:", err);
         res.status(500).json({ error: "Fetch failed" }); 
     }
 });

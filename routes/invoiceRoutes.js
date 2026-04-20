@@ -100,12 +100,18 @@ if (lastInvoice && lastInvoice.billNo) {
         // 🔥 STOCK UPDATE - FIX END
 
         // 2. CUSTOMER LEDGER UPDATE
-        if (creditAmount > 0 && customerId && customerId !== "null") {
-            await Customer.findOneAndUpdate(
-                { _id: customerId, userMobile: userMobile },
-                { $inc: { currentBalance: Number(creditAmount) || 0 } }
-            );
-        }
+       if (creditAmount > 0 && customerId && customerId !== "null") {
+    // 1. முதல்ல அமௌன்ட்டை நம்பரா மாத்தி, மைனஸ்ல இருந்தா பிளஸ்ஸா மாத்துறோம்
+    const cleanAmount = Math.abs(Number(creditAmount));
+
+    console.log(`Updating balance for ${customerId}: Adding ₹${cleanAmount}`);
+
+    await Customer.findOneAndUpdate(
+        { _id: customerId, userMobile: userMobile },
+        { $inc: { currentBalance: cleanAmount } }, // பாசிட்டிவ் வேல்யூ மட்டும் போகும்
+        { new: true } // அப்டேட் ஆன புது டேட்டாவை ரிட்டன் பண்ணும்
+    );
+}
 
         res.status(201).json({ 
             success: true, 

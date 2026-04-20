@@ -81,15 +81,11 @@ router.get('/customer-bills/:userMobile/:customerId', async (req, res) => {
     }
 });
 
-// Customer-க்கு பணம் வாங்கும்போது (Receipt)
-// ✅ இது கண்டிப்பாக POST ஆக இருக்க வேண்டும்
 router.post('/receipt-in', async (req, res) => {
     try {
         const { customerId, userMobile, amountReceived } = req.body;
         
-        // 🔍 செக் பண்ணுங்க: இந்த console log வருதான்னு பாருங்க
-        console.log("Data received:", customerId, amountReceived);
-
+        // 1. கஸ்டமர் பேலன்ஸ் குறைக்கிறோம்
         const updatedCustomer = await Customer.findOneAndUpdate(
             { _id: customerId, userMobile: userMobile },
             { $inc: { currentBalance: -Number(amountReceived) } }, 
@@ -99,6 +95,19 @@ router.post('/receipt-in', async (req, res) => {
         if (!updatedCustomer) {
             return res.status(404).json({ error: "Customer Not Found" });
         }
+
+        // 2. 🟢 மிக முக்கியம்: பணத்தை வரவு வைத்ததற்கு ஒரு "Fake" Invoice அல்லது 
+        // ஒரு ட்ரான்ஸாக்ஷன் ரெக்கார்ட் உருவாக்கினால் தான் ஹிஸ்டரியில் காட்டும்.
+        const receiptInvoice = new Invoice({
+            userMobile: userMobile,
+            billNo: "REC-" + Date.now().toString().slice(-4),
+            customerId: customerId,
+            customerName: updatedCustomer.name,
+            totalAmount: amountReceived,
+            paymentMode: "Receipt", // இதை Receipt என வைப்போம்
+            billDate: new Date()
+        });
+        await receiptInvoice.save();
 
         res.status(200).json({ success: true, newBalance: updatedCustomer.currentBalance });
     } catch (err) {

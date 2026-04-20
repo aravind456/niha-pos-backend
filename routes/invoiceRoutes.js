@@ -400,9 +400,11 @@ router.get('/report/item-wise', async (req, res) => {
 router.get('/customer-bills/:userMobile/:customerId', async (req, res) => {
     try {
         const bills = await Invoice.find({ 
-            userMobile: req.params.userMobile, // userMobile-ஐயும் செக் செய்கிறோம்
+            userMobile: req.params.userMobile, 
             customerId: req.params.customerId,
-            paymentMode: "Credit" 
+            // 🔴 இங்கே உங்கள் பில்லில் "Credit" என்று இருந்தால் மட்டுமே வரும்
+            // ஒருவேளை நீங்கள் "multi" என்று போட்டிருந்தால் வராது.
+            $or: [{ paymentMode: "Credit" }, { paymentMode: "multi" }] 
         }).sort({ billDate: -1 });
         
         res.status(200).json(bills);

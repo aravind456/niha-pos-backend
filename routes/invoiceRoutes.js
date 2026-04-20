@@ -476,42 +476,6 @@ router.get('/customer-outstanding/:customerId', async (req, res) => {
     }
 });
 
-router.post('/add-receipt', async (req, res) => {
-    try {
-        console.log("Incoming Receipt Data:", req.body); // என்ன டேட்டா வருதுனு பாக்கலாம்
 
-        const { customerId, amountReceived, date, paymentMode, userMobile } = req.body;
-
-        // 1. ஒரு புது ஆப்ஜெக்ட்டை உருவாக்குறோம்
-        const receiptEntry = new Invoice({
-            customerId: customerId,
-            totalAmount: Number(amountReceived),
-            billDate: date || new Date(),
-            type: "RECEIPT", // இது ரொம்ப முக்கியம்!
-            paymentMode: paymentMode || "Cash",
-            userMobile: userMobile,
-            // மத்த required ஃபீல்டுகளுக்கு டம்மி டேட்டா (Schema எர்ரர் வராம இருக்க)
-            items: [], 
-            totalTax: 0,
-            billNo: "REC-" + Date.now().toString().slice(-6) // ஒரு தற்காலிக நம்பர்
-        });
-
-        // 2. சேவ் பண்ண ட்ரை பண்றோம்
-        const savedReceipt = await receiptEntry.save();
-        console.log("Saved Successfully:", savedReceipt);
-
-        // 3. கஸ்டமர் பேலன்ஸை அப்டேட் பண்றோம்
-        await Customer.findOneAndUpdate(
-            { _id: customerId, userMobile: userMobile },
-            { $inc: { currentBalance: -Math.abs(Number(amountReceived)) } }
-        );
-
-        res.json({ success: true, message: "Receipt Saved!" });
-
-    } catch (e) {
-        console.error("Save Error Detail:", e); // இங்க தான் என்ன தப்புனு காட்டும்
-        res.status(500).json({ success: false, error: e.message });
-    }
-});
 
 module.exports = router;

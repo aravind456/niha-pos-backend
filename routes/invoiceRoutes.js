@@ -427,6 +427,20 @@ router.get('/customer-bills/:customerId', async (req, res) => {
 
 // routes/invoiceRoutes.js
 
+router.get('/customer-bills/:supplierId', async (req, res) => {
+    try {
+        const { supplierId } = req.params;
+        const bills = await Purchase.find({ 
+            supplierId: supplierId, 
+            paymentType: "Credit" 
+        }).sort({ date: -1 }); 
+        
+        res.json(bills);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 router.get('/customer-outstanding/:customerId', async (req, res) => {
     try {
         const bills = await Invoice.find({ 

@@ -37,6 +37,8 @@ try {
     const settingsRoutes = require('./routes/Settings');
     const invoiceRoutes = require('./routes/invoiceRoutes'); 
     const purchaseRoutes = require('./routes/purchaseRoutes');
+    const receiptRoutes = require('./routes/receiptRoutes'); 
+    const paymentRoutes = require('./routes/paymentRoutes'); 
 
 
 
@@ -47,6 +49,8 @@ try {
     app.use('/api/settings', settingsRoutes);
     app.use('/api/invoices', invoiceRoutes);
     app.use('/api/purchases', purchaseRoutes);
+    app.use('/api/receipts', receiptRoutes);
+    app.use('/api/payments', paymentRoutes);
 
 
 } catch (e) {

@@ -1,12 +1,12 @@
 const mongoose = require('mongoose');
 
 const receiptSchema = new mongoose.Schema({
-    receiptNo: { type: String, required: true }, // இது REC-1, REC-2 என வரும்
-    customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
-    amountReceived: { type: Number, required: true },
+    receiptNo: { type: String, required: true, unique: true }, // எ.கா: REC-001
     date: { type: Date, default: Date.now },
-    paymentMode: { type: String, default: "Cash" },
-    userMobile: { type: String, required: true }
+    customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
+    amount: { type: Number, required: true },
+    paymentMode: { type: String, enum: ['Cash', 'Online', 'Cheque'], default: 'Cash' },
+    remarks: { type: String }
 });
 
 module.exports = mongoose.model('Receipt', receiptSchema);

@@ -19,8 +19,17 @@ router.post('/add', async (req, res) => {
     try {
         const { customerId, amount, billNo, userMobile, paymentMode } = req.body;
 
+
+    // 1. கடைசியாக போடப்பட்ட ரசீது எண்ணை எடுத்து, அதோடு 1-ஐக் கூட்டுகிறோம்
+        const lastReceipt = await Receipt.findOne({ userMobile }).sort({ createdAt: -1 });
+        let nextReceiptNo = 1;
+        if (lastReceipt && lastReceipt.receiptNo) {
+            nextReceiptNo = parseInt(lastReceipt.receiptNo) + 1;
+        }
+
         // A. புதிய ரிசிப்டை உருவாக்கி சேமிக்க வேண்டும்
         const newReceipt = new Receipt({
+            receiptNo: nextReceiptNo.toString(),
             customerId,
             amount,
             billNo,

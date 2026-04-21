@@ -29,7 +29,7 @@ router.post('/add', async (req, res) => {
 
         // A. புதிய ரிசிப்டை உருவாக்கி சேமிக்க வேண்டும்
         const newReceipt = new Receipt({
-            receiptNo: nextReceiptNo.toString(),
+            receiptNo: generatedReceiptNo,
             customerId,
             amount,
             billNo,

@@ -32,6 +32,13 @@ router.post('/add', async (req, res) => {
            $inc: { currentBalance: -amount }
         });
 
+        if (billNo) {
+            await Invoice.findOneAndUpdate(
+                { billNo: billNo, customerId: customerId },
+                { $inc: { creditAmount: -amount } } // இன்வாய்ஸிலும் தொகையை குறைக்கிறோம்
+            );
+        }
+
         res.status(201).json({ 
             message: "Receipt Saved & Customer Balance Updated!", 
             data: newReceipt 

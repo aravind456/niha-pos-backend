@@ -35,7 +35,7 @@ router.post('/add', async (req, res) => {
         if (billNo) {
             await Invoice.findOneAndUpdate(
                 { billNo: billNo, customerId: customerId },
-                { $inc: { creditAmount: -amount } } // இன்வாய்ஸிலும் தொகையை குறைக்கிறோம்
+                { $inc: { totalAmount: -amount } } // இன்வாய்ஸிலும் தொகையை குறைக்கிறோம்
             );
         }
 

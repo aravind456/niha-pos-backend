@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const receiptSchema = new mongoose.Schema({
     userMobile: { type: String, required: true },
-    receiptNo: { type: String, required: false, unique: true }, // எ.கா: REC-001
+   // receiptNo: { type: String, required: false, unique: true }, // எ.கா: REC-001
     billNo: String,
     date: { type: Date, default: Date.now },
     customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },

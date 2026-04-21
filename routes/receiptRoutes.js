@@ -18,13 +18,13 @@ router.post('/add', async (req, res) => {
     try {
         const { customerId, amount, billNo, userMobile, paymentMode } = req.body;
 
-const newReceipt = new Receipt({
-    customerId,
-    amount,
-    billNo, // இப்போ பில் நம்பரும் சேவ் ஆகும்
-    userMobile,
-    paymentMode
-});
+        const newReceipt = new Receipt({
+         customerId,
+         amount,
+         billNo, // இப்போ பில் நம்பரும் சேவ் ஆகும்
+         userMobile,
+         paymentMode
+        });
 
         // B. கஸ்டமரோட வர வேண்டிய தொகையை (Balance) குறைக்கிறோம்
         // $inc: { balance: -amount } என்றால் இருக்கும் தொகையில் இருந்து இது மைனஸ் ஆகும்

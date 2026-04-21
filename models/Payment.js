@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const paymentSchema = new mongoose.Schema({
+    userMobile: { type: String, required: true },
     paymentNo: { type: String, required: true, unique: true }, // எ.கா: PAY-001
     date: { type: Date, default: Date.now },
     supplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier', required: true },

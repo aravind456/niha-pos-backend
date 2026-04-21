@@ -16,16 +16,20 @@ router.get('/', async (req, res) => {
 // 2. புது ரிசிப்ட் போட (Entry)
 router.post('/add', async (req, res) => {
     try {
-        const { customerId, amount } = req.body;
+        const { customerId, amount, billNo, userMobile, paymentMode } = req.body;
 
-        // A. ரிசிப்டை சேவ் செய்கிறோம்
-        const newReceipt = new Receipt(req.body);
-        await newReceipt.save();
+const newReceipt = new Receipt({
+    customerId,
+    amount,
+    billNo, // இப்போ பில் நம்பரும் சேவ் ஆகும்
+    userMobile,
+    paymentMode
+});
 
         // B. கஸ்டமரோட வர வேண்டிய தொகையை (Balance) குறைக்கிறோம்
         // $inc: { balance: -amount } என்றால் இருக்கும் தொகையில் இருந்து இது மைனஸ் ஆகும்
         await Customer.findByIdAndUpdate(customerId, { 
-            $inc: { balance: -amount } 
+           $inc: { currentBalance: -amount }
         });
 
         res.status(201).json({ 

@@ -49,10 +49,11 @@ router.post('/add', async (req, res) => {
             message: "Receipt Saved & Balance Updated!", 
             data: newReceipt 
         });
-    } catch (err) {
-        console.error("Receipt Error:", err); // எரர் என்னவென்று டெர்மினலில் பார்க்க
-        res.status(400).json({ error: err.message });
-    }
+} catch (err) {
+    // 🔴 இந்த வரியைச் சேர்த்து சர்வரை ரீஸ்டார்ட் பண்ணுங்க
+    console.log("CRITICAL ERROR IN BACKEND:", err.message); 
+    res.status(400).json({ error: err.message });
+}
 });
 
 module.exports = router;

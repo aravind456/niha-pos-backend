@@ -63,6 +63,7 @@ if (lastInvoice && lastInvoice.billNo) {
             billNo: nextBillNo,
             customerName: req.body.customerName || "Cash",
             cartItems: items, 
+            creditAmount: req.body.paymentMode === "Credit" ? req.body.totalAmount : (req.body.creditAmount || 0),
             billDate: req.body.date || req.body.createdAt || Date.now()
         });
 

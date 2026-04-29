@@ -21,14 +21,15 @@ router.post('/add', async (req, res) => {
         const { customerId, amount, billNo, userMobile, paymentMode } = req.body;
 
         // 1. Receipt Number Generation fix
-        const lastReceipt = await Receipt.findOne({ userMobile }).sort({ createdAt: -1 });
-        let nextReceiptNo = 1;
-        if (lastReceipt && lastReceipt.receiptNo) {
-            // REC-123 nu iruntha athula irunthu number mattum edukka logic
-            const lastNo = lastReceipt.receiptNo.toString().replace('REC-', '');
-            nextReceiptNo = parseInt(lastNo) + 1;
-        }
-        const generatedReceiptNo = `REC-${nextReceiptNo}`;
+        //const lastReceipt = await Receipt.findOne({ userMobile }).sort({ createdAt: -1 });
+        //let nextReceiptNo = 1;
+        //if (lastReceipt && lastReceipt.receiptNo) {
+        //    // REC-123 nu iruntha athula irunthu number mattum edukka logic
+        //    const lastNo = lastReceipt.receiptNo.toString().replace('REC-', '');
+        //    nextReceiptNo = parseInt(lastNo) + 1;
+        //}
+        //const generatedReceiptNo = `REC-${nextReceiptNo}`;
+        const generatedReceiptNo = "REC-" + Date.now();
 
         // 2. New Receipt Object
         const newReceipt = new Receipt({

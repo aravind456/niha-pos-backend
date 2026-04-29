@@ -78,18 +78,25 @@ router.delete('/delete-customer/:id', async (req, res) => {
     } catch (err) { res.status(400).json({ error: "Delete failed" }); }
 });
 
-// GET ONLY CREDIT BILLS FOR A CUSTOMER
-router.get('/customer-bills/:customerId', async (req, res) => {
+// GET CUSTOMERS - திருத்தப்பட்ட கோட்
+router.get('/get-customers/:userMobile', async (req, res) => {
     try {
-        // Inga 'Credit' mode-la irukara bills-ai mattum filter panrom
-        const bills = await Invoice.find({ 
-            customerId: req.params.customerId,
-            paymentMode: "Credit" 
-        }).sort({ billDate: -1 });
+        const customers = await Customer.find({ userMobile: req.params.userMobile }).sort({ name: 1 });
         
-        res.status(200).json(bills);
-    } catch (err) {
-        res.status(500).json({ error: "Failed to fetch bills" });
+        const formattedCustomers = customers.map(c => {
+            const customerObj = c.toObject();
+            
+            // மாற்றம் இங்கே: 
+            // 'totalBalance' தேவையில்லை. 'outstanding' என்பது 'currentBalance' மட்டுமே.
+            customerObj.outstanding = Number(customerObj.currentBalance) || 0; 
+            
+            customerObj.mobile = customerObj.mobileNumber || customerObj.mobile || "No Number";
+            return customerObj;
+        });
+
+        res.status(200).json(formattedCustomers);
+    } catch (err) { 
+        res.status(500).json({ error: "Fetch failed" }); 
     }
 });
 

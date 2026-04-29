@@ -40,8 +40,13 @@ router.get('/get-customers/:userMobile', async (req, res) => {
         
         const formattedCustomers = customers.map(c => {
             const customerObj = c.toObject();
-            // Outstanding என்பது currentBalance மட்டுமே
-            customerObj.outstanding = Number(customerObj.currentBalance) || 0; 
+            
+            // balance மற்றும் outstanding இரண்டிலும் currentBalance-ஐக் கொடுக்கவும்
+            // ஒருவேளை currentBalance இல்லையென்றால் (null), 0 என்று காட்டும்
+            const bal = Number(customerObj.currentBalance) || 0;
+            customerObj.balance = bal; 
+            customerObj.outstanding = bal;
+            
             customerObj.mobile = customerObj.mobileNumber || customerObj.mobile || "No Number";
             return customerObj;
         });

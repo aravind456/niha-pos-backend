@@ -54,7 +54,7 @@ router.post('/add', async (req, res) => {
         if (billNo && billNo !== 'Bulk' && billNo !== 'Opening Balance') {
             await Invoice.findOneAndUpdate(
                 { billNo: billNo, userMobile: userMobile },
-                { $inc: { OpeningBalance: -amount } }
+                { $inc: { creditAmount: -amount } }
             );
         }
 

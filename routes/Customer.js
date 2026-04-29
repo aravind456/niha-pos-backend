@@ -3,12 +3,21 @@ const router = express.Router();
 const Customer = require('../models/Customer');
 
 // ADD CUSTOMER
+// ADD CUSTOMER
 router.post('/add-customer', async (req, res) => {
     try {
-        const { userMobile, name } = req.body;
+        const { userMobile, name, openingBalance } = req.body;
         const customerCount = await Customer.countDocuments({ userMobile });
         const newCode = (customerCount + 1).toString().padStart(4, '0');
-        const newCustomer = new Customer({ ...req.body, customerCode: newCode });
+
+        // மாற்றம் இங்கே: 
+        // புதிய கஸ்டமர் சேரும்போது, currentBalance-ம் openingBalance-க்கு சமமாக இருக்க வேண்டும்.
+        const newCustomer = new Customer({ 
+            ...req.body, 
+            customerCode: newCode,
+            currentBalance: Number(openingBalance) || 0 // இதைச் சேர்க்கவும்
+        });
+
         const savedData = await newCustomer.save();
         res.status(201).json({ message: "Customer Saved", data: savedData });
     } catch (err) { 
@@ -50,11 +59,15 @@ router.get('/get-customers/:userMobile', async (req, res) => {
 //});
 
 /// UPDATE CUSTOMER
-router.put('/update-customer/:id', async (req, res) => {
+// தப்பான பேலன்ஸை சரிசெய்ய (One-time fix)
+router.put('/fix-balance/:id', async (req, res) => {
     try {
-        const updated = await Customer.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
-        res.status(200).json(updated);
-    } catch (err) { res.status(400).json({ error: "Update failed" }); }
+        const customer = await Customer.findById(req.params.id);
+        // உதாரணமாக: opening 1000 - receipt 1000 = balance 0 வர வேண்டும்
+        // இப்போது -1000 இருப்பதால், அதை 0-ஆக மாற்றுங்கள்
+        await Customer.findByIdAndUpdate(req.params.id, { currentBalance: 0 });
+        res.send("Fixed");
+    } catch (err) { res.status(500).send(err.message); }
 });
 
 // DELETE CUSTOMER

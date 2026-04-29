@@ -2,20 +2,28 @@ const express = require('express');
 const router = express.Router();
 const Customer = require('../models/Customer');
 
-// ADD CUSTOMER
-// ADD CUSTOMER
+// 1. ADD CUSTOMER - டபுள் என்ட்ரி ஆகாமல் இருக்க செக் சேர்க்கப்பட்டுள்ளது
 router.post('/add-customer', async (req, res) => {
     try {
-        const { userMobile, name, openingBalance } = req.body;
+        const { userMobile, mobileNumber, openingBalance } = req.body;
+
+        // ஏற்கனவே இதே மொபைல் எண்ணில் கஸ்டமர் இருக்கிறாரா என்று பார்க்க
+        const existingCustomer = await Customer.findOne({ 
+            userMobile: userMobile, 
+            mobileNumber: mobileNumber 
+        });
+
+        if (existingCustomer) {
+            return res.status(400).json({ error: "இந்த மொபைல் எண் ஏற்கனவே உள்ளது!" });
+        }
+
         const customerCount = await Customer.countDocuments({ userMobile });
         const newCode = (customerCount + 1).toString().padStart(4, '0');
 
-        // மாற்றம் இங்கே: 
-        // புதிய கஸ்டமர் சேரும்போது, currentBalance-ம் openingBalance-க்கு சமமாக இருக்க வேண்டும்.
         const newCustomer = new Customer({ 
             ...req.body, 
             customerCode: newCode,
-            currentBalance: Number(openingBalance) || 0 // இதைச் சேர்க்கவும்
+            currentBalance: Number(openingBalance) || 0 
         });
 
         const savedData = await newCustomer.save();
@@ -25,19 +33,15 @@ router.post('/add-customer', async (req, res) => {
     }
 });
 
-// GET CUSTOMERS
+// 2. GET CUSTOMERS - ஒரு முறை மட்டும் போதும் (சரியான லாஜிக் உடன்)
 router.get('/get-customers/:userMobile', async (req, res) => {
     try {
         const customers = await Customer.find({ userMobile: req.params.userMobile }).sort({ name: 1 });
         
-        // டேட்டா அனுப்பும் முன் மொபைல் நம்பர் செக்
         const formattedCustomers = customers.map(c => {
             const customerObj = c.toObject();
-            const opening = Number(customerObj.openingBalance) || 0;
-            const current = Number(customerObj.currentBalance) || 0;
-            customerObj.totalBalance = opening + current; // Inga kooti anupurom
-            // இதில் 'mobile' அல்லது 'customerMobile' - உங்கள் மாடலில் உள்ள பெயரைக் கொடுங்கள்
-            //customerObj.mobile = customerObj.mobile || customerObj.customerMobile || "No Number";
+            // Outstanding என்பது currentBalance மட்டுமே
+            customerObj.outstanding = Number(customerObj.currentBalance) || 0; 
             customerObj.mobile = customerObj.mobileNumber || customerObj.mobile || "No Number";
             return customerObj;
         });
@@ -48,29 +52,28 @@ router.get('/get-customers/:userMobile', async (req, res) => {
     }
 });
 
-// GET CUSTOMERS
-//router.get('/get-customers/:userMobile', async (req, res) => {
-//    try {
-//        const customers = await Customer.find({ userMobile: req.params.userMobile }).sort({ name: 1 });
-//        res.status(200).json(customers);
-//    } catch (err) { 
-//        res.status(500).json({ error: "Fetch failed" }); 
-//    }
-//});
-
-/// UPDATE CUSTOMER
-// தப்பான பேலன்ஸை சரிசெய்ய (One-time fix)
-router.put('/fix-balance/:id', async (req, res) => {
+// 3. UPDATE CUSTOMER - இது வேலை செய்யவில்லை என்று சொன்னீர்கள், இப்போது இது வேலை செய்யும்
+router.put('/update-customer/:id', async (req, res) => {
     try {
-        const customer = await Customer.findById(req.params.id);
-        // உதாரணமாக: opening 1000 - receipt 1000 = balance 0 வர வேண்டும்
-        // இப்போது -1000 இருப்பதால், அதை 0-ஆக மாற்றுங்கள்
-        await Customer.findByIdAndUpdate(req.params.id, { currentBalance: 0 });
-        res.send("Fixed");
-    } catch (err) { res.status(500).send(err.message); }
+        const updateData = { ...req.body };
+        
+        // ஒருவேளை openingBalance-ஐ மாற்றினால் currentBalance-ஐயும் அப்டேட் செய்ய
+        if (updateData.openingBalance !== undefined) {
+            updateData.currentBalance = updateData.openingBalance;
+        }
+
+        const updated = await Customer.findByIdAndUpdate(
+            req.params.id, 
+            { $set: updateData }, 
+            { new: true } // புதிய டேட்டாவை திரும்ப அனுப்பும்
+        );
+        res.status(200).json(updated);
+    } catch (err) { 
+        res.status(400).json({ error: "Update failed" }); 
+    }
 });
 
-// DELETE CUSTOMER
+// 4. DELETE CUSTOMER
 router.delete('/delete-customer/:id', async (req, res) => {
     try {
         await Customer.findByIdAndDelete(req.params.id);
@@ -78,26 +81,12 @@ router.delete('/delete-customer/:id', async (req, res) => {
     } catch (err) { res.status(400).json({ error: "Delete failed" }); }
 });
 
-// GET CUSTOMERS - திருத்தப்பட்ட கோட்
-router.get('/get-customers/:userMobile', async (req, res) => {
+// 5. FIX BALANCE - தப்பான டேட்டாவைச் சரிசெய்ய (தேவைப்பட்டால் மட்டும் பயன்படுத்தவும்)
+router.put('/fix-balance/:id', async (req, res) => {
     try {
-        const customers = await Customer.find({ userMobile: req.params.userMobile }).sort({ name: 1 });
-        
-        const formattedCustomers = customers.map(c => {
-            const customerObj = c.toObject();
-            
-            // மாற்றம் இங்கே: 
-            // 'totalBalance' தேவையில்லை. 'outstanding' என்பது 'currentBalance' மட்டுமே.
-            customerObj.outstanding = Number(customerObj.currentBalance) || 0; 
-            
-            customerObj.mobile = customerObj.mobileNumber || customerObj.mobile || "No Number";
-            return customerObj;
-        });
-
-        res.status(200).json(formattedCustomers);
-    } catch (err) { 
-        res.status(500).json({ error: "Fetch failed" }); 
-    }
+        await Customer.findByIdAndUpdate(req.params.id, { currentBalance: 0 });
+        res.send("Fixed");
+    } catch (err) { res.status(500).send(err.message); }
 });
 
 module.exports = router;

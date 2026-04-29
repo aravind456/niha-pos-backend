@@ -15,54 +15,53 @@ router.get('/', async (req, res) => {
 });
 
 // 2. புது ரிசிப்ட் போட
+// receipts.js route-la ithai update pannunga
 router.post('/add', async (req, res) => {
     try {
         const { customerId, amount, billNo, userMobile, paymentMode } = req.body;
 
-
-    // 1. கடைசியாக போடப்பட்ட ரசீது எண்ணை எடுத்து, அதோடு 1-ஐக் கூட்டுகிறோம்
+        // 1. Receipt Number Generation fix
         const lastReceipt = await Receipt.findOne({ userMobile }).sort({ createdAt: -1 });
         let nextReceiptNo = 1;
         if (lastReceipt && lastReceipt.receiptNo) {
-            nextReceiptNo = parseInt(lastReceipt.receiptNo) + 1;
+            // REC-123 nu iruntha athula irunthu number mattum edukka logic
+            const lastNo = lastReceipt.receiptNo.toString().replace('REC-', '');
+            nextReceiptNo = parseInt(lastNo) + 1;
         }
+        const generatedReceiptNo = `REC-${nextReceiptNo}`;
 
-        // A. புதிய ரிசிப்டை உருவாக்கி சேமிக்க வேண்டும்
+        // 2. New Receipt Object
         const newReceipt = new Receipt({
             receiptNo: generatedReceiptNo,
             customerId,
-            amount,
+            amount: Number(amount),
             billNo,
             userMobile,
             paymentMode,
-            date: new Date() // தேதியையும் சேர்த்துக்கொள்ளுங்கள்
+            date: new Date()
         });
         
-        await newReceipt.save(); // 2. இதை நீங்கள் கோடில் விடவில்லை, இதுதான் டேட்டாவை சேவ் செய்யும்
+        await newReceipt.save(); // DB-la save aagum
 
-        // B. கஸ்டமரோட மொத்த அவுட்ஸ்டாண்டிங் பேலன்ஸை குறைக்கிறோம்
+        // 3. Customer Balance update
+        // Opening balance-aiyum serthu kuraikka currentBalance-la minus panrom
         await Customer.findByIdAndUpdate(customerId, { 
             $inc: { currentBalance: -amount }
         });
 
-        // C. குறிப்பிட்ட இன்வாய்ஸில் இருக்கும் கடன் தொகையை (creditAmount) குறைக்கிறோம்
-        // billNo 'Bulk' ஆக இருந்தால் இது ரன் ஆகாது
-        if (billNo && billNo !== 'Bulk') {
+        // 4. Specific Invoice Update
+        if (billNo && billNo !== 'Bulk' && billNo !== 'Opening Balance') {
             await Invoice.findOneAndUpdate(
-                { billNo: billNo, userMobile: userMobile }, // customerId-க்கு பதிலாக userMobile பயன்படுத்துவது பாதுகாப்பானது
+                { billNo: billNo, userMobile: userMobile },
                 { $inc: { creditAmount: -amount } }
             );
         }
 
-        res.status(201).json({ 
-            message: "Receipt Saved & Balance Updated!", 
-            data: newReceipt 
-        });
-} catch (err) {
-    // 🔴 இந்த வரியைச் சேர்த்து சர்வரை ரீஸ்டார்ட் பண்ணுங்க
-    console.log("CRITICAL ERROR IN BACKEND:", err.message); 
-    res.status(400).json({ error: err.message });
-}
+        res.status(201).json({ message: "Success", data: newReceipt });
+    } catch (err) {
+        console.error("Error:", err.message);
+        res.status(400).json({ error: err.message });
+    }
 });
 
 module.exports = router;

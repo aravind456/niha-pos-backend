@@ -477,6 +477,66 @@ router.get('/customer-outstanding/:customerId', async (req, res) => {
     }
 });
 
+// ==========================================
+// CUSTOMER LEDGER REPORT API (Flutter PartyLedgerScreen-kaga)
+// ==========================================
+router.get('/report/ledger/:customerId', async (req, res) => {
+    try {
+        const { customerId } = req.params;
+        const { userMobile } = req.query;
+
+        // 1. Customer details eduthu avanga Opening Balance-ai check panrom
+        const customer = await Customer.findOne({ _id: customerId, userMobile: userMobile });
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+
+        // 2. Invoices table-la irundhu andha customer-oda Credit bills-ai edukkom
+        const invoices = await Invoice.find({
+            userMobile: userMobile,
+            customerId: customerId,
+            $or: [{ paymentMode: "Credit" }, { creditAmount: { $gt: 0 } }]
+        }).sort({ billDate: 1 }); // Pazhaya bill-la irundhu sort panrom
+
+        let ledger = [];
+        let runningBalance = 0;
+
+        // Step A: Opening Balance-ai add panrom
+        const opBal = Number(customer.openingBalance) || 0;
+        runningBalance = opBal;
+
+        ledger.push({
+            date: "Opening",
+            desc: "Opening Balance",
+            debit: opBal,
+            credit: 0,
+            balance: runningBalance
+        });
+
+        // Step B: Ovoru bill-aium Debit (Amount Due) side-la add panrom
+        invoices.forEach(inv => {
+            const amount = Number(inv.creditAmount) || Number(inv.totalAmount) || 0;
+            runningBalance += amount;
+
+            ledger.push({
+                date: new Date(inv.billDate).toLocaleDateString('en-GB'), // 30/04/2026 format
+                desc: `Bill No: ${inv.billNo}`,
+                debit: amount,
+                credit: 0,
+                balance: runningBalance
+            });
+        });
+
+        // Step C: Latest transaction mela vara mathiri reverse panrom (Optional)
+        // Flutter-la display panna convenient-ah iruka reverse panni anupalam
+        res.json(ledger.reverse());
+
+    } catch (e) {
+        console.error("Ledger API Error:", e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 
 
 module.exports = router;

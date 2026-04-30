@@ -518,17 +518,34 @@ router.get('/report/ledger/:customerId', async (req, res) => {
             balance: runningBalance
         });
 
-        invoices.forEach(inv => {
-            const amount = Number(inv.creditAmount) || Number(inv.totalAmount) || 0;
-            runningBalance += amount;
-            ledger.push({
-                date: new Date(inv.billDate).toLocaleDateString('en-GB'),
-                desc: `Bill No: ${inv.billNo}`,
-                debit: amount,
-                credit: 0,
-                balance: runningBalance
-            });
+        // invoices.forEach block-ai ippadi maathunga (Backend-la)
+invoices.forEach(inv => {
+    // Bill sales-ah irundha Debit-la varum
+    // Receipt-ah irundha Credit-la varum (idharku 'type' check pannanum)
+    const isSales = inv.type === "SALES" || !inv.type; 
+    const amount = Number(inv.creditAmount) || Number(inv.totalAmount) || 0;
+
+    if (isSales) {
+        runningBalance += amount;
+        ledger.push({
+            date: new Date(inv.billDate).toLocaleDateString('en-GB'),
+            desc: `Bill No: ${inv.billNo}`,
+            debit: amount,
+            credit: 0,
+            balance: runningBalance
         });
+    } else {
+        // Receipt logic (future-kaga)
+        runningBalance -= amount;
+        ledger.push({
+            date: new Date(inv.billDate).toLocaleDateString('en-GB'),
+            desc: `Receipt: ${inv.billNo || 'PAY'}`,
+            debit: 0,
+            credit: amount,
+            balance: runningBalance
+        });
+    }
+});
 
         res.json(ledger.reverse());
 

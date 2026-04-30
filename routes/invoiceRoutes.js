@@ -477,6 +477,25 @@ router.get('/customer-outstanding/:customerId', async (req, res) => {
     }
 });
 
+// Parties list edukka (Customer / Supplier)
+router.get('/parties', async (req, res) => {
+    try {
+        const { type, userMobile } = req.query; // Flutter-la irundhu varum
+        
+        // Unga DB-la type (CUSTOMER/SUPPLIER) vachi filter panrom
+        // userMobile check panrathu romba mukkiyam
+        const parties = await Customer.find({ 
+            userMobile: userMobile,
+            // oru vela unga DB-la 'type' field illai-na idhai remove pannidunga
+            type: type || 'CUSTOMER' 
+        }).select('name _id'); // Name matrum ID mattum pothum
+
+        res.json(parties);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // ==========================================
 // CUSTOMER LEDGER REPORT API (Flutter PartyLedgerScreen-kaga)
 // ==========================================
@@ -519,7 +538,7 @@ router.get('/report/ledger/:customerId', async (req, res) => {
         });
 
         // invoices.forEach block-ai ippadi maathunga (Backend-la)
-invoices.forEach(inv => {
+       invoices.forEach(inv => {
     // Bill sales-ah irundha Debit-la varum
     // Receipt-ah irundha Credit-la varum (idharku 'type' check pannanum)
     const isSales = inv.type === "SALES" || !inv.type; 

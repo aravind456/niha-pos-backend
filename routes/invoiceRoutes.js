@@ -478,17 +478,18 @@ router.get('/customer-outstanding/:customerId', async (req, res) => {
 });
 
 // Parties list edukka (Customer / Supplier)
+// Parties list edukka (Customer / Supplier)
+// Indha route illathathal thaan "Cannot GET /api/parties" varudhu
 router.get('/parties', async (req, res) => {
     try {
-        const { type, userMobile } = req.query; // Flutter-la irundhu varum
+        const { type, userMobile } = req.query; 
         
-        // Unga DB-la type (CUSTOMER/SUPPLIER) vachi filter panrom
-        // userMobile check panrathu romba mukkiyam
-        const parties = await Customer.find({ 
-            userMobile: userMobile,
-            // oru vela unga DB-la 'type' field illai-na idhai remove pannidunga
-            type: type || 'CUSTOMER' 
-        }).select('name _id'); // Name matrum ID mattum pothum
+        // Dynamic-ah Model select panrom (Customer or Supplier)
+        let Model = (type === 'SUPPLIER') ? require('../models/Supplier') : Customer;
+
+        const parties = await Model.find({ 
+            userMobile: userMobile 
+        }).select('name _id'); 
 
         res.json(parties);
     } catch (e) {
@@ -499,6 +500,10 @@ router.get('/parties', async (req, res) => {
 // ==========================================
 // CUSTOMER LEDGER REPORT API (Flutter PartyLedgerScreen-kaga)
 // ==========================================
+router.get('/report/ledger', (req, res) => {
+    res.json([]);
+});
+
 router.get('/report/ledger/:customerId', async (req, res) => {
     try {
         const { customerId } = req.params;

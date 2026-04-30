@@ -485,23 +485,28 @@ router.get('/report/ledger/:customerId', async (req, res) => {
         const { customerId } = req.params;
         const { userMobile } = req.query;
 
-        // 1. Customer details eduthu avanga Opening Balance-ai check panrom
+        // 🟢 SAFETY CHECK: ID valid-ah illai-na error message anupum
+        if (!mongoose.Types.ObjectId.isValid(customerId)) {
+            return res.status(400).json({ 
+                message: "Invalid Customer ID format!",
+                received: customerId 
+            });
+        }
+
         const customer = await Customer.findOne({ _id: customerId, userMobile: userMobile });
         if (!customer) {
             return res.status(404).json({ message: "Customer not found" });
         }
 
-        // 2. Invoices table-la irundhu andha customer-oda Credit bills-ai edukkom
+        // ... baki ledger logic ellam correct-ah dhaan iruku ...
         const invoices = await Invoice.find({
             userMobile: userMobile,
             customerId: customerId,
             $or: [{ paymentMode: "Credit" }, { creditAmount: { $gt: 0 } }]
-        }).sort({ billDate: 1 }); // Pazhaya bill-la irundhu sort panrom
+        }).sort({ billDate: 1 });
 
         let ledger = [];
         let runningBalance = 0;
-
-        // Step A: Opening Balance-ai add panrom
         const opBal = Number(customer.openingBalance) || 0;
         runningBalance = opBal;
 
@@ -513,13 +518,11 @@ router.get('/report/ledger/:customerId', async (req, res) => {
             balance: runningBalance
         });
 
-        // Step B: Ovoru bill-aium Debit (Amount Due) side-la add panrom
         invoices.forEach(inv => {
             const amount = Number(inv.creditAmount) || Number(inv.totalAmount) || 0;
             runningBalance += amount;
-
             ledger.push({
-                date: new Date(inv.billDate).toLocaleDateString('en-GB'), // 30/04/2026 format
+                date: new Date(inv.billDate).toLocaleDateString('en-GB'),
                 desc: `Bill No: ${inv.billNo}`,
                 debit: amount,
                 credit: 0,
@@ -527,8 +530,6 @@ router.get('/report/ledger/:customerId', async (req, res) => {
             });
         });
 
-        // Step C: Latest transaction mela vara mathiri reverse panrom (Optional)
-        // Flutter-la display panna convenient-ah iruka reverse panni anupalam
         res.json(ledger.reverse());
 
     } catch (e) {

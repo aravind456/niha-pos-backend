@@ -504,6 +504,9 @@ router.get('/report/ledger', (req, res) => {
     res.json([]);
 });
 
+// invoice.js file-la mela Receipt model-ai include pannunga
+const Receipt = require('../models/Receipt'); 
+
 router.get('/report/ledger/:customerId', async (req, res) => {
     try {
         const { customerId } = req.params;
@@ -512,32 +515,32 @@ router.get('/report/ledger/:customerId', async (req, res) => {
         const customer = await Customer.findOne({ _id: customerId, userMobile: userMobile });
         if (!customer) return res.status(404).json({ message: "Customer not found" });
 
-        // Step A: Invoices yedukkarom (Debit side)
+        // 1. Invoices (Bills) edukkirom
         const invoices = await Invoice.find({
             userMobile: userMobile,
             customerId: customerId,
             paymentMode: "Credit"
         });
 
-        // Step B: Receipts yedukkarom (Credit side)
-        // Note: Receipt model import panni irukanum
+        // 2. Receipts (Cash Recieved) edukkirom
         const receipts = await Receipt.find({
             userMobile: userMobile,
             customerId: customerId
         });
 
-        // Step C: Rendum onna merge panni date-wise sort panrom
+        // 3. Rendu data-vaiyum onnaa serkkirom (Merging)
         let combinedData = [
             ...invoices.map(inv => ({ ...inv._doc, entryType: 'BILL' })),
             ...receipts.map(rec => ({ ...rec._doc, entryType: 'RECEIPT' }))
         ];
 
+        // 4. Date wise order-ah veikkirom (Sorting)
         combinedData.sort((a, b) => new Date(a.billDate || a.date) - new Date(b.billDate || b.date));
 
         let ledger = [];
         let runningBalance = Number(customer.openingBalance) || 0;
 
-        // Opening Balance entry
+        // Opening Balance line
         ledger.push({
             date: "Opening",
             desc: "Opening Balance",
@@ -546,10 +549,10 @@ router.get('/report/ledger/:customerId', async (req, res) => {
             balance: runningBalance
         });
 
-        // Step D: Loop panni calculation panrom
+        // 5. Calculation Logic
         combinedData.forEach(item => {
             if (item.entryType === 'BILL') {
-                const amt = Number(item.creditAmount) || 0;
+                const amt = Number(item.creditAmount) || Number(item.totalAmount) || 0;
                 runningBalance += amt;
                 ledger.push({
                     date: new Date(item.billDate).toLocaleDateString('en-GB'),
@@ -563,7 +566,7 @@ router.get('/report/ledger/:customerId', async (req, res) => {
                 runningBalance -= amt;
                 ledger.push({
                     date: new Date(item.date).toLocaleDateString('en-GB'),
-                    desc: `Receipt No: ${item.receiptNo || 'PAY'}`,
+                    desc: `Receipt: ${item.billNo || 'PAY'}`,
                     debit: 0,
                     credit: amt,
                     balance: runningBalance
@@ -571,7 +574,7 @@ router.get('/report/ledger/:customerId', async (req, res) => {
             }
         });
 
-        res.json(ledger.reverse()); // Putha transactions mela vara reverse panrom
+        res.json(ledger.reverse()); // Puthiya transaction mela vara reverse panrom
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

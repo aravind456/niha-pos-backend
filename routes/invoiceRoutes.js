@@ -509,76 +509,73 @@ router.get('/report/ledger/:customerId', async (req, res) => {
         const { customerId } = req.params;
         const { userMobile } = req.query;
 
-        // 🟢 SAFETY CHECK: ID valid-ah illai-na error message anupum
-        if (!mongoose.Types.ObjectId.isValid(customerId)) {
-            return res.status(400).json({ 
-                message: "Invalid Customer ID format!",
-                received: customerId 
-            });
-        }
-
         const customer = await Customer.findOne({ _id: customerId, userMobile: userMobile });
-        if (!customer) {
-            return res.status(404).json({ message: "Customer not found" });
-        }
+        if (!customer) return res.status(404).json({ message: "Customer not found" });
 
-        // ... baki ledger logic ellam correct-ah dhaan iruku ...
+        // Step A: Invoices yedukkarom (Debit side)
         const invoices = await Invoice.find({
             userMobile: userMobile,
             customerId: customerId,
-            $or: [{ paymentMode: "Credit" }, { creditAmount: { $gt: 0 } }]
-        }).sort({ billDate: 1 });
+            paymentMode: "Credit"
+        });
+
+        // Step B: Receipts yedukkarom (Credit side)
+        // Note: Receipt model import panni irukanum
+        const receipts = await Receipt.find({
+            userMobile: userMobile,
+            customerId: customerId
+        });
+
+        // Step C: Rendum onna merge panni date-wise sort panrom
+        let combinedData = [
+            ...invoices.map(inv => ({ ...inv._doc, entryType: 'BILL' })),
+            ...receipts.map(rec => ({ ...rec._doc, entryType: 'RECEIPT' }))
+        ];
+
+        combinedData.sort((a, b) => new Date(a.billDate || a.date) - new Date(b.billDate || b.date));
 
         let ledger = [];
-        let runningBalance = 0;
-        const opBal = Number(customer.openingBalance) || 0;
-        runningBalance = opBal;
+        let runningBalance = Number(customer.openingBalance) || 0;
 
+        // Opening Balance entry
         ledger.push({
             date: "Opening",
             desc: "Opening Balance",
-            debit: opBal,
+            debit: runningBalance,
             credit: 0,
             balance: runningBalance
         });
 
-        // invoices.forEach block-ai ippadi maathunga (Backend-la)
-       invoices.forEach(inv => {
-    // Bill sales-ah irundha Debit-la varum
-    // Receipt-ah irundha Credit-la varum (idharku 'type' check pannanum)
-    const isSales = inv.type === "SALES" || !inv.type; 
-    const amount = Number(inv.creditAmount) || Number(inv.totalAmount) || 0;
-
-    if (isSales) {
-        runningBalance += amount;
-        ledger.push({
-            date: new Date(inv.billDate).toLocaleDateString('en-GB'),
-            desc: `Bill No: ${inv.billNo}`,
-            debit: amount,
-            credit: 0,
-            balance: runningBalance
+        // Step D: Loop panni calculation panrom
+        combinedData.forEach(item => {
+            if (item.entryType === 'BILL') {
+                const amt = Number(item.creditAmount) || 0;
+                runningBalance += amt;
+                ledger.push({
+                    date: new Date(item.billDate).toLocaleDateString('en-GB'),
+                    desc: `Bill No: ${item.billNo}`,
+                    debit: amt,
+                    credit: 0,
+                    balance: runningBalance
+                });
+            } else {
+                const amt = Number(item.amount) || 0;
+                runningBalance -= amt;
+                ledger.push({
+                    date: new Date(item.date).toLocaleDateString('en-GB'),
+                    desc: `Receipt No: ${item.receiptNo || 'PAY'}`,
+                    debit: 0,
+                    credit: amt,
+                    balance: runningBalance
+                });
+            }
         });
-    } else {
-        // Receipt logic (future-kaga)
-        runningBalance -= amount;
-        ledger.push({
-            date: new Date(inv.billDate).toLocaleDateString('en-GB'),
-            desc: `Receipt: ${inv.billNo || 'PAY'}`,
-            debit: 0,
-            credit: amount,
-            balance: runningBalance
-        });
-    }
-});
 
-        res.json(ledger.reverse());
-
+        res.json(ledger.reverse()); // Putha transactions mela vara reverse panrom
     } catch (e) {
-        console.error("Ledger API Error:", e.message);
         res.status(500).json({ error: e.message });
     }
 });
-
 
 
 module.exports = router;

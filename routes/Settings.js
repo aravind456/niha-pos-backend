@@ -108,7 +108,7 @@ router.post('/master-reset', async (req, res) => {
 
         res.status(200).json({ success: true, message: `${type} reset successful` });
     } catch (error) {
-        console.error("Reset Error:", error);
+        console.log("Database Error:", error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });

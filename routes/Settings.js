@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Settings = require('../models/Settings');
 
-// எல்லா மாடல்களையும் இம்போர்ட் செய்யவும் (அப்போதுதான் டெலீட் செய்ய முடியும்)
+// மாடல்களை இம்போர்ட் செய்யும் போது பெயர்கள் சரியாக இருக்கிறதா எனச் சரிபார்க்கவும்
 const Invoice = require('../models/Invoice');
 const Product = require('../models/Product');
 const Customer = require('../models/Customer');
@@ -11,18 +11,14 @@ const Purchase = require('../models/Purchase');
 const Payment = require('../models/Payment');
 const Receipt = require('../models/Receipt');
 
-// 1. Specific User-oda settings-ai edukkum (GET)
-// Path: /api/settings/:userMobile
+// 1. Get Settings
 router.get('/:userMobile', async (req, res) => {
     try {
-        // Inga specific mobile number-ai vachi search panroam
         let settings = await Settings.findOne({ userMobile: req.params.userMobile });
-        
         if (!settings) {
-            // Settings illai na, andha mobile-ku pudhu default create panroam
             settings = new Settings({ 
                 userMobile: req.params.userMobile,
-                adminPin: "1234", // Default PIN
+                adminPin: "1234", 
                 shopName: "My Shop",
                 lockCustomer: false,
                 lockProduct: false,
@@ -37,12 +33,10 @@ router.get('/:userMobile', async (req, res) => {
     }
 });
 
-// 2. Specific User-oda settings-ai update panna (PUT)
+// 2. Update Settings
 router.put('/update', async (req, res) => {
     try {
         const { userMobile } = req.body;
-        
-        // userMobile vachu search panni update pannu, illana pudhusa create pannu (upsert)
         const updatedSettings = await Settings.findOneAndUpdate(
             { userMobile: userMobile }, 
             { $set: req.body }, 
@@ -55,7 +49,7 @@ router.put('/update', async (req, res) => {
     }
 });
 
-// 3. Admin PIN check panna (POST)
+// 3. Verify Admin PIN
 router.post('/verify-pin', async (req, res) => {
     const { userMobile, pin } = req.body;
     try {
@@ -70,44 +64,53 @@ router.post('/verify-pin', async (req, res) => {
     }
 });
 
-// Master Reset API
+// 4. Master Reset API (திருத்தப்பட்டது)
 router.post('/master-reset', async (req, res) => {
     const { type, userMobile } = req.body;
+    
+    // Debugging-க்காக பிரிண்ட் செய்து பாருங்கள்
+    console.log(`Reset Request: Type=${type}, Mobile=${userMobile}`);
+
+    if (!userMobile) {
+        return res.status(400).json({ success: false, message: "User mobile is required" });
+    }
 
     try {
-        let result;
         switch (type) {
             case "BILLS":
-                result = await Invoice.deleteMany({ userMobile });
+                await Invoice.deleteMany({ userMobile: userMobile });
                 break;
             case "PRODUCTS":
-                result = await Product.deleteMany({ userMobile });
+                await Product.deleteMany({ userMobile: userMobile });
                 break;
             case "CUSTOMERS":
-                result = await Customer.deleteMany({ userMobile });
+                await Customer.deleteMany({ userMobile: userMobile });
                 break;
             case "SUPPLIERS":
-                result = await Supplier.deleteMany({ userMobile });
+                await Supplier.deleteMany({ userMobile: userMobile });
                 break;
             case "STOCK":
-                await Purchase.deleteMany({ userMobile });
-                // ஸ்டாக் ரீசெட் செய்ய Product-ல் உள்ள qty-ஐ 0 ஆக்கலாம் அல்லது அப்படியே விடலாம்
+                await Purchase.deleteMany({ userMobile: userMobile });
+                // விருப்பப்பட்டால் ப்ராடக்ட் குவாண்டிட்டியையும் 0 ஆக்கலாம்
+                await Product.updateMany({ userMobile: userMobile }, { $set: { quantity: 0 } });
                 break;
             case "LEDGER":
-                await Payment.deleteMany({ userMobile });
-                await Receipt.deleteMany({ userMobile });
+                await Payment.deleteMany({ userMobile: userMobile });
+                await Receipt.deleteMany({ userMobile: userMobile });
+                break;
+            case "BALANCES": // விடுபட்ட BALANCES ஆப்ஷன்
+                await Customer.updateMany({ userMobile: userMobile }, { $set: { balance: 0 } });
+                await Supplier.updateMany({ userMobile: userMobile }, { $set: { balance: 0 } });
                 break;
             default:
                 return res.status(400).json({ message: "Invalid reset type" });
         }
 
-        res.status(200).json({ success: true, message: `${type} deleted successfully` });
+        res.status(200).json({ success: true, message: `${type} reset successful` });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: "Server error during deletion" });
+        console.error("Reset Error:", error);
+        res.status(500).json({ success: false, message: error.message });
     }
 });
-
-module.exports = router;
 
 module.exports = router;

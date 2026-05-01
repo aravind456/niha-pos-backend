@@ -2,6 +2,15 @@ const express = require('express');
 const router = express.Router();
 const Settings = require('../models/Settings');
 
+// எல்லா மாடல்களையும் இம்போர்ட் செய்யவும் (அப்போதுதான் டெலீட் செய்ய முடியும்)
+const Invoice = require('../models/Invoice');
+const Product = require('../models/Product');
+const Customer = require('../models/Customer');
+const Supplier = require('../models/Supplier');
+const Purchase = require('../models/Purchase');
+const Payment = require('../models/Payment');
+const Receipt = require('../models/Receipt');
+
 // 1. Specific User-oda settings-ai edukkum (GET)
 // Path: /api/settings/:userMobile
 router.get('/:userMobile', async (req, res) => {
@@ -60,5 +69,45 @@ router.post('/verify-pin', async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
+
+// Master Reset API
+router.post('/master-reset', async (req, res) => {
+    const { type, userMobile } = req.body;
+
+    try {
+        let result;
+        switch (type) {
+            case "BILLS":
+                result = await Invoice.deleteMany({ userMobile });
+                break;
+            case "PRODUCTS":
+                result = await Product.deleteMany({ userMobile });
+                break;
+            case "CUSTOMERS":
+                result = await Customer.deleteMany({ userMobile });
+                break;
+            case "SUPPLIERS":
+                result = await Supplier.deleteMany({ userMobile });
+                break;
+            case "STOCK":
+                await Purchase.deleteMany({ userMobile });
+                // ஸ்டாக் ரீசெட் செய்ய Product-ல் உள்ள qty-ஐ 0 ஆக்கலாம் அல்லது அப்படியே விடலாம்
+                break;
+            case "LEDGER":
+                await Payment.deleteMany({ userMobile });
+                await Receipt.deleteMany({ userMobile });
+                break;
+            default:
+                return res.status(400).json({ message: "Invalid reset type" });
+        }
+
+        res.status(200).json({ success: true, message: `${type} deleted successfully` });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Server error during deletion" });
+    }
+});
+
+module.exports = router;
 
 module.exports = router;

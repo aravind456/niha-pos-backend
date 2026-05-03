@@ -460,8 +460,8 @@ router.get('/customer-bills/:userMobile/:customerId', async (req, res) => {
         const bills = await Invoice.find({ 
             userMobile: userMobile, 
             customerId: customerId, // Inga Schema-la irukira peyare podunga
-            paymentMode: "Credit" // Credit bill-ai mattum ledger-il kaatta
-        }).sort({ billDate: -1 });
+            paymentMode: { $regex: /credit/i } // Case insensitive (Credit/credit renduume edukum)
+            }).sort({ billDate: -1 });
         
         res.status(200).json(bills);
     } catch (err) {

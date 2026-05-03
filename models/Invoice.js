@@ -12,8 +12,15 @@ const invoiceSchema = new mongoose.Schema({
     salesmanName: String,
     cartItems: Array,
     totalAmount: Number,
-    paymentMode: String,
-    billDate: { type: Date, default: Date.now }
+   // paymentMode: String,
+    billDate: { type: Date, default: Date.now },
+    // Multi payment-க்காக இவை தேவை
+    cashAmount: Number,
+    onlineAmount: Number,
+    creditAmount: Number,
+    type: { type: String, default: "SALES" }, // "SALES" அல்லது "RECEIPT"
+    paymentMode: { type: String }, // Cash, Gpay
+    description: { type: String },
 });
 
 

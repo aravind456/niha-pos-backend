@@ -360,19 +360,19 @@ router.delete('/:id', async (req, res) => {
             return res.status(404).json({ success: false, message: "Bill not found" });
         }
 
-        // --- PUDHU LOGIC: STOCK UPDATE ---
-        // Bill-il ulla ovvoru item-ukkum stock-ai thirumba add seigidhom
+        // 2. STOCK RECOVERY LOGIC
+        // Bill-il ulla ovvoru item-aiyum loop seigirom
         if (bill.items && bill.items.length > 0) {
             for (let item of bill.items) {
+                // Image-il ulla 'stock' field-ai inge increment seigirom
                 await Product.findByIdAndUpdate(
-                    item.productId, 
-                    { $inc: { stock: item.qty } } // Bill delete aavadhanaal stock-ai (+) seigidhom
+                    item.productId, // Product-in ObjectId
+                    { $inc: { stock: item.qty } } // item.qty-ai thirumba stock-il koottugirom
                 );
             }
         }
-        // --------------------------------
 
-        // 2. Customer balance-ai update seigirom
+        // 3. Customer balance-ai update seigirom (Bill amount-ai minus seigirom)
         if (bill.customerId) {
             await Customer.findByIdAndUpdate(
                 bill.customerId,
@@ -380,10 +380,10 @@ router.delete('/:id', async (req, res) => {
             );
         }
 
-        // 3. Ippo bill-ai delete seigirom
+        // 4. Ippo bill-ai delete seigirom
         await Invoice.findByIdAndDelete(billId); 
         
-        res.json({ success: true, message: "Bill Deleted, Stock and Balance Updated" });
+        res.json({ success: true, message: "Bill Deleted & Stock Restored Successfully" });
 
     } catch (e) {
         console.error("Delete Error:", e.message);

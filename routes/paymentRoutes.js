@@ -16,23 +16,26 @@ router.get('/', async (req, res) => {
 // 2. புது பேமெண்ட் போட (With Auto Balance Reduction)
 router.post('/add', async (req, res) => {
     try {
-        const { supplierId, amount } = req.body;
+        const { supplierId, amount, userMobile } = req.body; // userMobile-um include pannunga
 
-        // 1. பேமெண்ட்டை சேவ் பண்றோம்
-        const newPayment = new Payment(req.body);
+        const newPayment = new Payment({
+            ...req.body,
+            date: req.body.date || new Date()
+        });
         await newPayment.save();
 
-        // 2. சப்ளையர் பேலன்ஸை குறைக்கிறோம் ($inc உபயோகித்து மைனஸ் பண்றோம்)
+        // Schema-la currentBalance-nu irundha adhaye ingayum use pannunga
         await Supplier.findByIdAndUpdate(supplierId, { 
-            $inc: { balance: -amount } 
+            $inc: { currentBalance: -Math.abs(amount) } 
         });
 
         res.status(201).json({ 
+            success: true,
             message: "Payment Recorded & Supplier Balance Updated!", 
             data: newPayment 
         });
     } catch (err) {
-        res.status(400).json({ error: err.message });
+        res.status(400).json({ success: false, error: err.message });
     }
 });
 

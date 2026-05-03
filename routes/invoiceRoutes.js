@@ -446,19 +446,16 @@ router.get('/customer-bills/:userMobile/:customerId', async (req, res) => {
     try {
         const { userMobile, customerId } = req.params;
 
-        if (customerId === "$id" || customerId.length < 10) {
+        if (!mongoose.Types.ObjectId.isValid(customerId)) {
             return res.status(400).json({ error: "Invalid Customer ID" });
         }
 
-        // Query-la paymentMode-ah check pannunga. 
-        // Unga Flutter code-la "Credit" nu anupinaal ithu work aagum.
         const bills = await Invoice.find({ 
-            userMobile: mobile, 
-            // Ensure this field name matches your Invoice Schema (customerId or customerId._id)
-            customerId: new mongoose.Types.ObjectId(cId) 
+            userMobile: userMobile, 
+            customerId: customerId, // Inga Schema-la irukira peyare podunga
+            paymentMode: "Credit" // Credit bill-ai mattum ledger-il kaatta
         }).sort({ billDate: -1 });
         
-        console.log(`Found ${bills.length} bills for customer: ${customerId}`);
         res.status(200).json(bills);
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch bills" });

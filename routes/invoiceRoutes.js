@@ -517,36 +517,48 @@ router.get('/report/ledger/:customerId', async (req, res) => {
         const { customerId } = req.params;
         const { userMobile } = req.query;
 
+        // 1. Customer-ah check panrom
         const customer = await Customer.findOne({ _id: customerId, userMobile: userMobile });
         if (!customer) return res.status(404).json({ message: "Customer not found" });
 
-        // Invoices edukka
+        // 2. Invoices (Bills) - Payment mode "Credit" illana "credit" rendaiyum edukka vaikkurom
         const invoices = await Invoice.find({
             userMobile: userMobile,
-            customerId: customerId, 
-            // Multi-payment-la credit amount irunthaalum ledger-ku varanum
-            $or: [{ paymentMode: "Credit" }, { creditAmount: { $gt: 0 } }]
+            customerId: customerId,
+            $or: [
+                { paymentMode: "Credit" },
+                { paymentMode: "credit" },
+                { creditAmount: { $gt: 0 } } // Multi-payment-la credit irunthaalum varum
+            ]
         });
 
-        // Receipts edukka
+        // 3. Receipts (Payments received)
         const receipts = await Receipt.find({
             userMobile: userMobile,
             customerId: customerId
         });
 
-        // 4. Rendu data-vaiyum onnaa serkkirom
+        // 4. Data Conversion (Rendu date format-aiyum 'finalDate' nu mathurom)
         let combinedData = [
-            ...invoices.map(inv => ({ ...inv._doc, entryType: 'BILL' })),
-            ...receipts.map(rec => ({ ...rec._doc, entryType: 'RECEIPT' }))
+            ...invoices.map(inv => ({ 
+                ...inv._doc, 
+                entryType: 'BILL', 
+                finalDate: inv.billDate || inv.createdAt 
+            })),
+            ...receipts.map(rec => ({ 
+                ...rec._doc, 
+                entryType: 'RECEIPT', 
+                finalDate: rec.date || rec.createdAt 
+            }))
         ];
 
-        // 5. Date wise order-ah veikkirom (Oldest to Newest for calculation)
-        combinedData.sort((a, b) => new Date(a.billDate || a.date) - new Date(b.billDate || b.date));
+        // 5. Date wise sort (Oldest to Newest)
+        combinedData.sort((a, b) => new Date(a.finalDate) - new Date(b.finalDate));
 
         let ledger = [];
         let runningBalance = Number(customer.openingBalance) || 0;
 
-        // Opening Balance line
+        // Opening Balance entry
         ledger.push({
             date: "Opening",
             desc: "Opening Balance",
@@ -555,14 +567,14 @@ router.get('/report/ledger/:customerId', async (req, res) => {
             balance: runningBalance
         });
 
-        // 6. Calculation Logic
+        // 6. Transaction processing
         combinedData.forEach(item => {
             if (item.entryType === 'BILL') {
                 const amt = Number(item.creditAmount) || Number(item.totalAmount) || 0;
                 runningBalance += amt;
                 ledger.push({
-                    date: item.billDate ? new Date(item.billDate).toLocaleDateString('en-GB') : "N/A",
-                    desc: `Bill No: ${item.billNo} (${item.paymentMode})`,
+                    date: new Date(item.finalDate).toLocaleDateString('en-GB'),
+                    desc: `Bill No: ${item.billNo}`,
                     debit: amt,
                     credit: 0,
                     balance: runningBalance
@@ -571,8 +583,8 @@ router.get('/report/ledger/:customerId', async (req, res) => {
                 const amt = Number(item.amount) || 0;
                 runningBalance -= amt;
                 ledger.push({
-                    date: item.date ? new Date(item.date).toLocaleDateString('en-GB') : "N/A",
-                    desc: `Receipt: ${item.billNo || 'PAY'}`,
+                    date: new Date(item.finalDate).toLocaleDateString('en-GB'),
+                    desc: `Receipt: ${item.receiptNo || 'PAY'}`,
                     debit: 0,
                     credit: amt,
                     balance: runningBalance
@@ -580,9 +592,11 @@ router.get('/report/ledger/:customerId', async (req, res) => {
             }
         });
 
-        // Puthiya transaction mela vara reverse panrom
+        // Latest entries mela varathuku reverse panrom
         res.json(ledger.reverse()); 
+
     } catch (e) {
+        console.error("Ledger Error:", e.message);
         res.status(500).json({ error: e.message });
     }
 });

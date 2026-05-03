@@ -447,18 +447,23 @@ router.get('/customer-bills/:userMobile/:customerId', async (req, res) => {
             return res.status(400).json({ error: "Invalid Customer ID" });
         }
 
-        // Credit பில்களை மட்டும் எடுக்கிறோம்
+        // Query-la paymentMode-ah check pannunga. 
+        // Unga Flutter code-la "Credit" nu anupinaal ithu work aagum.
         const bills = await Invoice.find({ 
             userMobile: userMobile, 
             customerId: customerId, 
-            paymentMode: "Credit" 
+            // Inga oru logic check: $or use panni 'Credit' and 'credit' renduume edukka vaikalaam
+            $or: [
+                { paymentMode: "Credit" },
+                { paymentMode: "credit" },
+                { creditAmount: { $gt: 0 } } // Oru velai credit amount 0 vida athigama irunthale edukka solrom
+            ]
         }).sort({ billDate: -1 });
         
         console.log(`Found ${bills.length} bills for customer: ${customerId}`);
         res.status(200).json(bills);
     } catch (err) {
-        console.error("Fetch Bills Error:", err);
-        res.status(500).json({ error: "Failed to fetch bills", detail: err.message });
+        res.status(500).json({ error: "Failed to fetch bills" });
     }
 });
 
@@ -512,18 +517,18 @@ router.get('/report/ledger/:customerId', async (req, res) => {
         const { customerId } = req.params;
         const { userMobile } = req.query;
 
-        // 1. Customer details-ai edukkirom
         const customer = await Customer.findOne({ _id: customerId, userMobile: userMobile });
         if (!customer) return res.status(404).json({ message: "Customer not found" });
 
-        // 2. Invoices (Bills) edukkirom 
+        // Invoices edukka
         const invoices = await Invoice.find({
             userMobile: userMobile,
-            customerId: customerId, // Ingae comma mukkiyam
-            paymentMode: "Credit"
+            customerId: customerId, 
+            // Multi-payment-la credit amount irunthaalum ledger-ku varanum
+            $or: [{ paymentMode: "Credit" }, { creditAmount: { $gt: 0 } }]
         });
 
-        // 3. Receipts (Vasool) edukkirom
+        // Receipts edukka
         const receipts = await Receipt.find({
             userMobile: userMobile,
             customerId: customerId

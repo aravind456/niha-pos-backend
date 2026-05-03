@@ -353,14 +353,26 @@ router.delete('/:id', async (req, res) => {
     try {
         const billId = req.params.id;
 
-        // 1. முதல்ல இந்த பில்லோட டீடைல்ஸ் எடுக்குறோம் (அமௌன்ட் & கஸ்டமர் ஐடி தேவை)
+        // 1. Bill details-ai edukkirom
         const bill = await Invoice.findById(billId);
 
         if (!bill) {
             return res.status(404).json({ success: false, message: "Bill not found" });
         }
 
-        // 2. கஸ்டமர் டேபிள்ல போயி அந்த பில்லோட அமௌன்ட்டை கழிக்கிறோம் ($inc கூட - போடுறோம்)
+        // --- PUDHU LOGIC: STOCK UPDATE ---
+        // Bill-il ulla ovvoru item-ukkum stock-ai thirumba add seigidhom
+        if (bill.items && bill.items.length > 0) {
+            for (let item of bill.items) {
+                await Product.findByIdAndUpdate(
+                    item.productId, 
+                    { $inc: { stock: item.qty } } // Bill delete aavadhanaal stock-ai (+) seigidhom
+                );
+            }
+        }
+        // --------------------------------
+
+        // 2. Customer balance-ai update seigirom
         if (bill.customerId) {
             await Customer.findByIdAndUpdate(
                 bill.customerId,
@@ -368,16 +380,17 @@ router.delete('/:id', async (req, res) => {
             );
         }
 
-        // 3. இப்போ பில்லை முழுமையாக டெலீட் செய்றோம்
+        // 3. Ippo bill-ai delete seigirom
         await Invoice.findByIdAndDelete(billId); 
         
-        res.json({ success: true, message: "Bill Deleted and Balance Updated" });
+        res.json({ success: true, message: "Bill Deleted, Stock and Balance Updated" });
 
     } catch (e) {
         console.error("Delete Error:", e.message);
         res.status(500).json({ success: false, error: e.message });
     }
 });
+
 
 router.get('/report/item-wise', async (req, res) => {
     try {

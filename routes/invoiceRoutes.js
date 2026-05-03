@@ -517,14 +517,13 @@ router.get('/report/ledger/:customerId', async (req, res) => {
         if (!customer) return res.status(404).json({ message: "Customer not found" });
 
         // 2. Invoices (Bills) edukkirom 
-        // Ingae paymentMode condition-ai eduthuvittom, appodhaan ellaa bill-um varum
         const invoices = await Invoice.find({
             userMobile: userMobile,
-            customerId: customerId
+            customerId: customerId, // Ingae comma mukkiyam
             paymentMode: "Credit"
         });
 
-        // 3. Receipts (Vasoool) edukkirom
+        // 3. Receipts (Vasool) edukkirom
         const receipts = await Receipt.find({
             userMobile: userMobile,
             customerId: customerId
@@ -536,13 +535,13 @@ router.get('/report/ledger/:customerId', async (req, res) => {
             ...receipts.map(rec => ({ ...rec._doc, entryType: 'RECEIPT' }))
         ];
 
-        // 5. Date wise order-ah veikkirom
+        // 5. Date wise order-ah veikkirom (Oldest to Newest for calculation)
         combinedData.sort((a, b) => new Date(a.billDate || a.date) - new Date(b.billDate || b.date));
 
         let ledger = [];
         let runningBalance = Number(customer.openingBalance) || 0;
 
-        // Opening Balance line modhalla add panrom
+        // Opening Balance line
         ledger.push({
             date: "Opening",
             desc: "Opening Balance",
@@ -554,7 +553,6 @@ router.get('/report/ledger/:customerId', async (req, res) => {
         // 6. Calculation Logic
         combinedData.forEach(item => {
             if (item.entryType === 'BILL') {
-                // creditAmount illai endraal totalAmount-ai edukkirom
                 const amt = Number(item.creditAmount) || Number(item.totalAmount) || 0;
                 runningBalance += amt;
                 ledger.push({
@@ -577,11 +575,11 @@ router.get('/report/ledger/:customerId', async (req, res) => {
             }
         });
 
-        res.json(ledger.reverse()); // Puthiya transaction mela vara reverse panrom
+        // Puthiya transaction mela vara reverse panrom
+        res.json(ledger.reverse()); 
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
 });
-
 
 module.exports = router;

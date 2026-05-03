@@ -61,6 +61,7 @@ if (lastInvoice && lastInvoice.billNo) {
         const newInvoice = new Invoice({
             ...req.body,
             billNo: nextBillNo,
+            customerId: customerId || null,
             customerName: req.body.customerName || "Cash",
             cartItems: items, 
             creditAmount: req.body.paymentMode === "Credit" ? req.body.totalAmount : (req.body.creditAmount || 0),
@@ -523,14 +524,13 @@ router.get('/report/ledger/:customerId', async (req, res) => {
 
         // 2. Invoices (Bills) - Payment mode "Credit" illana "credit" rendaiyum edukka vaikkurom
         const invoices = await Invoice.find({
-            userMobile: userMobile,
-            customerId: customerId,
-            $or: [
-                { paymentMode: "Credit" },
-                { paymentMode: "credit" },
-                { creditAmount: { $gt: 0 } } // Multi-payment-la credit irunthaalum varum
-            ]
-        });
+    userMobile: userMobile,
+    $or: [
+        { customerId: customerId }, // Puthiya bills-kaga
+        { customerName: customerName } // Pazhaya bills-kaga (Data gap fix)
+    ],
+    paymentMode: "Credit"
+});
 
         // 3. Receipts (Payments received)
         const receipts = await Receipt.find({

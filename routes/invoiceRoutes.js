@@ -48,22 +48,29 @@ router.post('/save-bill', async (req, res) => {
         // 1. Body-la irundhu data-vai edukkom
         const { userMobile, items, creditAmount, customerId } = req.body;
 
+        let validCustomerId = null;
+        if (customerId && mongoose.Types.ObjectId.isValid(customerId)) {
+         validCustomerId = new mongoose.Types.ObjectId(customerId);
+        } else if (customerId) {
+         return res.status(400).json({ success: false, message: "Invalid Customer ID" });
+        }
+
         if (!userMobile) {
             return res.status(400).json({ success: false, message: "userMobile is required!" });
         }
 
-        // Bill Number Generation
-        // Bill Number logic-ai ippadi maathunga
-const lastInvoice = await Invoice.findOne({ userMobile }).sort({ _id: -1 }); // Latest bill-ai edukka _id use pannunga
-let nextBillNo = "1";
-if (lastInvoice && lastInvoice.billNo) {
-    nextBillNo = (parseInt(lastInvoice.billNo) + 1).toString();
-}
+          // Bill Number Generation
+         // Bill Number logic-ai ippadi maathunga
+          const lastInvoice = await Invoice.findOne({ userMobile }).sort({ _id: -1 }); // Latest bill-ai edukka _id use pannunga
+          let nextBillNo = "1";
+           if (lastInvoice && lastInvoice.billNo) {
+           nextBillNo = (parseInt(lastInvoice.billNo) + 1).toString();
+          }
 
         const newInvoice = new Invoice({
             ...req.body,
             billNo: nextBillNo,
-            customerId: customerId || null,
+            customerId: validCustomerId,
             customerName: req.body.customerName || "Cash",
             cartItems: items, 
             creditAmount: req.body.paymentMode === "Credit" ? req.body.totalAmount : (req.body.creditAmount || 0),

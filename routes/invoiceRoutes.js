@@ -521,6 +521,7 @@ router.get('/report/ledger/:customerId', async (req, res) => {
         const invoices = await Invoice.find({
             userMobile: userMobile,
             customerId: customerId
+            paymentMode: "Credit"
         });
 
         // 3. Receipts (Vasoool) edukkirom

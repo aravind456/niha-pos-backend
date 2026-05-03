@@ -1,0 +1,20 @@
+const express = require('express');
+const router = express.Router();
+const mongoose = require('mongoose');
+
+// 1. Schema name and Model name check
+const invoiceSchema = new mongoose.Schema({
+    userMobile: { type: String, required: true },
+    billNo: { type: String, required: true },
+    customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' }, // இது மிக முக்கியம்
+    customerName: String,
+    customerMobile: String,
+    salesmanName: String,
+    cartItems: Array,
+    totalAmount: Number,
+    paymentMode: String,
+    billDate: { type: Date, default: Date.now }
+});
+
+
+module.exports = router;

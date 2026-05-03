@@ -512,35 +512,36 @@ router.get('/report/ledger/:customerId', async (req, res) => {
         const { customerId } = req.params;
         const { userMobile } = req.query;
 
+        // 1. Customer details-ai edukkirom
         const customer = await Customer.findOne({ _id: customerId, userMobile: userMobile });
         if (!customer) return res.status(404).json({ message: "Customer not found" });
 
-        // 1. Invoices (Bills) edukkirom
+        // 2. Invoices (Bills) edukkirom 
+        // Ingae paymentMode condition-ai eduthuvittom, appodhaan ellaa bill-um varum
         const invoices = await Invoice.find({
             userMobile: userMobile,
-            customerId: customerId,
-            paymentMode: "Credit"
+            customerId: customerId
         });
 
-        // 2. Receipts (Cash Recieved) edukkirom
+        // 3. Receipts (Vasoool) edukkirom
         const receipts = await Receipt.find({
             userMobile: userMobile,
             customerId: customerId
         });
 
-        // 3. Rendu data-vaiyum onnaa serkkirom (Merging)
+        // 4. Rendu data-vaiyum onnaa serkkirom
         let combinedData = [
             ...invoices.map(inv => ({ ...inv._doc, entryType: 'BILL' })),
             ...receipts.map(rec => ({ ...rec._doc, entryType: 'RECEIPT' }))
         ];
 
-        // 4. Date wise order-ah veikkirom (Sorting)
+        // 5. Date wise order-ah veikkirom
         combinedData.sort((a, b) => new Date(a.billDate || a.date) - new Date(b.billDate || b.date));
 
         let ledger = [];
         let runningBalance = Number(customer.openingBalance) || 0;
 
-        // Opening Balance line
+        // Opening Balance line modhalla add panrom
         ledger.push({
             date: "Opening",
             desc: "Opening Balance",
@@ -549,14 +550,15 @@ router.get('/report/ledger/:customerId', async (req, res) => {
             balance: runningBalance
         });
 
-        // 5. Calculation Logic
+        // 6. Calculation Logic
         combinedData.forEach(item => {
             if (item.entryType === 'BILL') {
+                // creditAmount illai endraal totalAmount-ai edukkirom
                 const amt = Number(item.creditAmount) || Number(item.totalAmount) || 0;
                 runningBalance += amt;
                 ledger.push({
-                    date: new Date(item.billDate).toLocaleDateString('en-GB'),
-                    desc: `Bill No: ${item.billNo}`,
+                    date: item.billDate ? new Date(item.billDate).toLocaleDateString('en-GB') : "N/A",
+                    desc: `Bill No: ${item.billNo} (${item.paymentMode})`,
                     debit: amt,
                     credit: 0,
                     balance: runningBalance
@@ -565,7 +567,7 @@ router.get('/report/ledger/:customerId', async (req, res) => {
                 const amt = Number(item.amount) || 0;
                 runningBalance -= amt;
                 ledger.push({
-                    date: new Date(item.date).toLocaleDateString('en-GB'),
+                    date: item.date ? new Date(item.date).toLocaleDateString('en-GB') : "N/A",
                     desc: `Receipt: ${item.billNo || 'PAY'}`,
                     debit: 0,
                     credit: amt,

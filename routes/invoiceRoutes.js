@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
+// invoice.js file-la mela Receipt model-ai include pannunga
+const Receipt = require('../models/Receipt'); 
 
 // 1. Schema Definition
 const invoiceSchema = new mongoose.Schema({
@@ -510,27 +512,28 @@ router.get('/report/ledger', (req, res) => {
     res.json([]);
 });
 
-// invoice.js file-la mela Receipt model-ai include pannunga
-const Receipt = require('../models/Receipt'); 
+
 
 router.get('/report/ledger/:customerId', async (req, res) => {
     try {
         const { customerId } = req.params;
-        const { userMobile } = req.query;
+        const { userMobile } = req.query; // Query-la irunthu userMobile edukkirom
 
         // 1. Customer-ah check panrom
         const customer = await Customer.findOne({ _id: customerId, userMobile: userMobile });
         if (!customer) return res.status(404).json({ message: "Customer not found" });
 
-        // 2. Invoices (Bills) - Payment mode "Credit" illana "credit" rendaiyum edukka vaikkurom
+        // 2. Invoices (Bills) query fix
+        // Inga customerName-ai customer object-la irunthe eduthukkalaam
         const invoices = await Invoice.find({
-    userMobile: userMobile,
-    $or: [
-        { customerId: customerId }, // Puthiya bills-kaga
-        { customerName: customerName } // Pazhaya bills-kaga (Data gap fix)
-    ],
-    paymentMode: "Credit"
-});
+            userMobile: userMobile,
+            $or: [
+                { customerId: customerId }, 
+                { customerName: customer.name } // Customer name-ah inge use panrom
+            ],
+            // Case insensitive search (Credit/credit renduume edukum)
+            paymentMode: { $regex: /credit/i } 
+        });
 
         // 3. Receipts (Payments received)
         const receipts = await Receipt.find({
@@ -538,7 +541,7 @@ router.get('/report/ledger/:customerId', async (req, res) => {
             customerId: customerId
         });
 
-        // 4. Data Conversion (Rendu date format-aiyum 'finalDate' nu mathurom)
+        // 4. Data Conversion
         let combinedData = [
             ...invoices.map(inv => ({ 
                 ...inv._doc, 
@@ -552,7 +555,7 @@ router.get('/report/ledger/:customerId', async (req, res) => {
             }))
         ];
 
-        // 5. Date wise sort (Oldest to Newest)
+        // 5. Date wise sort
         combinedData.sort((a, b) => new Date(a.finalDate) - new Date(b.finalDate));
 
         let ledger = [];
@@ -570,7 +573,8 @@ router.get('/report/ledger/:customerId', async (req, res) => {
         // 6. Transaction processing
         combinedData.forEach(item => {
             if (item.entryType === 'BILL') {
-                const amt = Number(item.creditAmount) || Number(item.totalAmount) || 0;
+                // Image-la paatha mathiri totalAmount field-ai check panrom
+                const amt = Number(item.totalAmount) || Number(item.creditAmount) || 0;
                 runningBalance += amt;
                 ledger.push({
                     date: new Date(item.finalDate).toLocaleDateString('en-GB'),
@@ -592,12 +596,12 @@ router.get('/report/ledger/:customerId', async (req, res) => {
             }
         });
 
-        // Latest entries mela varathuku reverse panrom
+        // Response
         res.json(ledger.reverse()); 
 
     } catch (e) {
         console.error("Ledger Error:", e.message);
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: "Internal Server Error: " + e.message });
     }
 });
 

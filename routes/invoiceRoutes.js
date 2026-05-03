@@ -81,7 +81,9 @@ router.post('/save-bill', async (req, res) => {
 
         // 🔥 STOCK UPDATE (DECREASE) - FIX START
         if (items && items.length > 0) {
-            const bulkOps = items.map(item => {
+            const bulkOps = items
+            .filter(item => (item.productId || item._id || item.id))
+            .map(item => {
                 // Flutter-la irundhu 'quantity' nu varutha illa 'qty' nu varutha nu check pannunga
                 const q = Number(item.quantity) || Number(item.qty) || 0;
 
@@ -114,7 +116,7 @@ router.post('/save-bill', async (req, res) => {
         // 🔥 STOCK UPDATE - FIX END
 
         // 2. CUSTOMER LEDGER UPDATE
-       if (creditAmount > 0 && customerId && customerId !== "null") {
+       if (creditAmount > 0 && validCustomerId) {
     // 1. முதல்ல அமௌன்ட்டை நம்பரா மாத்தி, மைனஸ்ல இருந்தா பிளஸ்ஸா மாத்துறோம்
     const cleanAmount = Math.abs(Number(creditAmount));
 

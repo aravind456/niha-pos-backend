@@ -453,14 +453,9 @@ router.get('/customer-bills/:userMobile/:customerId', async (req, res) => {
         // Query-la paymentMode-ah check pannunga. 
         // Unga Flutter code-la "Credit" nu anupinaal ithu work aagum.
         const bills = await Invoice.find({ 
-            userMobile: userMobile, 
-            customerId: customerId, 
-            // Inga oru logic check: $or use panni 'Credit' and 'credit' renduume edukka vaikalaam
-            $or: [
-                { paymentMode: "Credit" },
-                { paymentMode: "credit" },
-                { creditAmount: { $gt: 0 } } // Oru velai credit amount 0 vida athigama irunthale edukka solrom
-            ]
+            userMobile: mobile, 
+            // Ensure this field name matches your Invoice Schema (customerId or customerId._id)
+            customerId: new mongoose.Types.ObjectId(cId) 
         }).sort({ billDate: -1 });
         
         console.log(`Found ${bills.length} bills for customer: ${customerId}`);

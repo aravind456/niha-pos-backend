@@ -147,15 +147,24 @@ router.post('/save-bill', async (req, res) => {
 router.get('/today-sales/:mobile', async (req, res) => {
     try {
         const mobile = req.params.mobile;
-        const start = new Date();
-        start.setHours(0, 0, 0, 0); 
-        const end = new Date();
-        end.setHours(23, 59, 59, 999); 
+        
+        // இந்திய நேரப்படி (IST) இன்றைய நாளைக் கணக்கிடுதல்
+        const now = new Date();
+        const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC + 5:30
+        const istTime = new Date(now.getTime() + istOffset);
+        
+        const start = new Date(now.getTime() + istOffset);
+        start.setUTCHours(0, 0, 0, 0);
+        // மீண்டும் UTC-க்கு மாற்றி Query செய்ய வேண்டும் (ஏனெனில் DB-ல் UTC-ல் சேமிக்கப்பட்டிருக்கும்)
+        const startUTC = new Date(start.getTime() - istOffset);
 
-        // Query-ai ippadi maathunga:
+        const end = new Date(now.getTime() + istOffset);
+        end.setUTCHours(23, 59, 59, 999);
+        const endUTC = new Date(end.getTime() - istOffset);
+
         const invoices = await Invoice.find({
-            userMobile: mobile, // Mela params-la irundhu edutha 'mobile' variable
-            billDate: { $gte: start, $lte: end } // Innaikku date-la irukkira bill-ai matum edukka
+            userMobile: mobile,
+            billDate: { $gte: startUTC, $lte: endUTC }
         });
 
        //const invoices = await Invoice.find({

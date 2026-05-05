@@ -455,7 +455,7 @@ router.get('/customer-history/:userMobile/:customerName', async (req, res) => {
         const history = await Invoice.find({ 
             userMobile: userMobile, 
             customerName: customerName,
-            paymentMode: "Credit"
+            //paymentMode: "Credit"
         }).sort({ billDate: -1 });
         res.json(history);
     } catch (e) {
